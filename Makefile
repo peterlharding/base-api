@@ -14,6 +14,9 @@ chk-env:
 install:
 	uv sync
 
+git-chk:
+	git status --short && echo '---' && git log --oneline -5
+
 
 # ------------------------------------------------------------------------
 
