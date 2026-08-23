@@ -1,3 +1,30 @@
+
+# IDEs
+.vscode/
+.idea/
+
+# Archives
+*.7z
+*.gz
+*.tar
+*.rar
+*.tz
+*.zip
+
+# macOS
+.DS_Store
+
+#  Sensitive
+*.crt
+*.key
+*.pem
+
+# Just Ignore
+*.x
+*-ignore
+
+
+# -----------------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

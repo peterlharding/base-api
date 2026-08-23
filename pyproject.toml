@@ -1,0 +1,17 @@
+[project]
+name = "base-api"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.19.1",
+    "fastapi>=0.141.1",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy>=2.0.52",
+    "uvicorn[standard]>=0.52.4",
+]
+
+[tool.uv]
+# .venv lives on WSL's drvfs (Windows C:), while uv's cache is on the Linux
+# side, so hardlinks across the two are unreliable — copy files instead.
+link-mode = "copy"
