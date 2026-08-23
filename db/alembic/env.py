@@ -5,7 +5,8 @@ from logging.config import fileConfig
 from pathlib import Path
 
 # Make the repo root importable no matter where alembic is invoked from.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# (This file lives at <root>/db/alembic/env.py, so the root is parents[2].)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool

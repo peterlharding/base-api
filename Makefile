@@ -28,8 +28,8 @@ dev:
 # ------------------------------------------------------------------------
 
 migrate:
-	.venv/bin/alembic upgrade head
+	.venv/bin/alembic -c db/alembic.ini upgrade head
 
 
 autogenerate:
-	.venv/bin/alembic revision --autogenerate -m "$(or $(msg),update schema)"
+	.venv/bin/alembic -c db/alembic.ini revision --autogenerate -m "$(or $(msg),update schema)"
