@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 
@@ -21,6 +22,7 @@ from app.db.session import SessionLocal
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_title)
+    app.include_router(api_router)
 
     @app.get("/health")
     def health() -> dict:
