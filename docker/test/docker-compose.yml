@@ -1,0 +1,21 @@
+# Dedicated Postgres for the test suite (see doc/TESTING.md).
+#
+# Deliberately separate from the dev stack in docker/db/:
+#   * different port (5433) so dev and tests can run at the same time
+#   * different database (base_api_test) so tests can never touch dev data
+#   * no volume: `docker compose down` discards the data -> a clean slate
+#   * no .env lookup: self-contained, so tests never touch dev credentials
+
+services:
+
+  db:
+    # Same image as the dev stack (docker/db/docker-compose.yml).
+    image: postgres
+    container_name: base-db-test
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: api
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: base_api_test
+    ports:
+      - 127.0.0.1:5433:5432

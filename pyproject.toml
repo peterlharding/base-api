@@ -11,6 +11,17 @@ dependencies = [
     "uvicorn[standard]>=0.52.4",
 ]
 
+[dependency-groups]
+dev = [
+    # httpx2, not httpx: starlette's TestClient deprecates httpx
+    "httpx2>=2.0",
+    "pytest>=8.3.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
 [tool.uv]
 # .venv lives on WSL's drvfs (Windows C:), while uv's cache is on the Linux
 # side, so hardlinks across the two are unreliable — copy files instead.
