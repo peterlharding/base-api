@@ -60,3 +60,35 @@ On your workflow question: I didn't have one saved — this was the first releas
 Next up on your roadmap: more resources, auth, tests, README, Dockerfile, CI — just say which one.
 
 
+---
+
+Alright — the working tree is clean, git-chk is in the Makefile, and
+doc/ and scripts/git-chk.sh are committed. Before I put together the
+test infrastructure design, I'll quickly check the environment (docker
+availability, and which Postgres image the dev stack is using so that
+the test stack matches it):
+
+
+Environment check complete: Docker 29 + Compose v5.4, and the dev stack
+is running on a floating postgres image. Now I've got the whole picture:
+
+* Sync SQLAlchemy + psycopg 3, with the engine created at import time
+from get_settings().database_url — meaning if I override the environment
+variables before importing the app, the whole stack (including alembic's
+env.py, which uses the same settings) will point at the test DB without
+any code changes.
+* The endpoint calls db.commit() — so the common "wrap each test in a
+transaction and roll it back" pattern won't work. Instead, per-test
+TRUNCATE … RESTART IDENTITY is the correct isolation strategy (and as
+a bonus, you get deterministic IDs).
+* pydantic-settings gives environment variables priority over .env, so
+DB_PORT/DB_NAME can be overridden for testing.
+
+This is a multi-file build (compose file, conftest, test suite, Makefile
+targets, dev dependencies). So let me put together a plan to get your
+approval.
+
+---
+
+
+

@@ -6,9 +6,15 @@
 #
 # -----------------------------------------------------------------------------
 
+
 git status --short
 
 echo '---' 
 
-git log --oneline -5
+git log --oneline -8
+
+echo '---' 
+
+git show --stat HEAD | head -30
+
 
