@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.3.0] - 2026-08-24
+
+### Added
+
+- Test suite: pytest running the real app end-to-end against a dedicated,
+  disposable Postgres (`docker/test/docker-compose.yml` — 127.0.0.1:5433,
+  database `base_api_test`, no volume). It never touches the dev stack
+  (5432 / `base_api`); both run side by side.
+- `tests/conftest.py` pins `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_PASSWORD`
+  before the app is imported, so the real engine, `SessionLocal` and alembic
+  all target the test database — no app changes, no dependency overrides.
+  A session fixture runs the real migrations (`alembic upgrade head`); an
+  autouse fixture truncates every table `RESTART IDENTITY` after each test,
+  keeping primary keys predictable.
+- `tests/test_users.py` — 10 end-to-end tests for `/api/v1/users` (health,
+  paged list, create with server defaults, validation 422s, 404/400 paths,
+  patch semantics, delete).
+- Makefile targets: `test`, `test-db-up` (idempotent, waits on `pg_isready`),
+  `test-db-down`, `test-db-reset` (fresh database, migrations re-run).
+- Dev dependencies (`pytest`, `httpx2`) in the uv `dev` dependency group.
+- `doc/TESTING.md` — how the test database works and how to add tests.
+
+### Fixed
+
+- Alembic migration `0001` called `op.create_sequence()`, which is not a real
+  alembic op — it had never actually run, because the dev database was built
+  from the psql scripts. Replaced with raw `op.execute` DDL, so a fresh
+  database can now really be built with `alembic upgrade head`.
+
 ## [0.2.0] - 2026-08-23
 
 ### Added
