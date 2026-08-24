@@ -18,7 +18,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_sequence("application_user_id_seq")
+    # alembic has no create_sequence op; raw DDL keeps the migration
+    # faithful to docker/db/03-create-application_user.sql.
+    op.execute("CREATE SEQUENCE application_user_id_seq")
     op.create_table(
         "application_user",
         sa.Column(
