@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.4.0] - 2026-08-25
+
+### Added
+
+- Alembic migrations for the new credentials/session/instance schema — a
+  fresh database now builds fully with `alembic upgrade head`
+  (chain `0001` → `0006`):
+  - `0002` — `set_when_modified()` trigger function and the
+    `application_user_set_when_modified` trigger; adds the
+    `when_modified timestamptz` column to `application_user` that the
+    trigger maintains.
+  - `0003` — `api_credentials` (identity `id`, uuid `user_guid`, unique
+    `email`) seeded with the four bootstrap credential rows.
+  - `0004` — `token_blacklist` (uuid `jti` primary key, `application_user`
+    FK with `ON DELETE CASCADE`, `expiry`/`user_id` indexes, table comment).
+  - `0005` — `instance_metadata` singleton (unique index on `(true)`),
+    release/version check constraints, `set_when_modified` trigger.
+  - `0006` — `login_session` (bytea token hash, inet, jsonb `data`,
+    12-hour default expiry, check constraints, indexes) and the
+    `login_session_active` view.
+- Matching SQL scripts: `api_credentials.sql`, `token_blacklist.sql`,
+  `instance_metadata.sql` and `login_session.sql` under
+  `db/schema/create/`, plus `db/schema/ddl/set_when_modified.sql`.
+- Dev tooling: `scripts/docker-chk.sh` docker check script; `git-chk`
+  extended with `log -8` and `show --stat`; test-design notes in
+  `doc/NOTES.md`.
+
+### Changed
+
+- Moved the DB-creation SQL scripts from `docker/db/` into `db/schema/`
+  (`create/` and `ddl/`); setup and docs updated to match.
+- `uv.lock` is no longer tracked (added to `.gitignore`); regenerate it
+  locally with `uv lock` / `uv sync`.
+
+### Fixed
+
+- `api_credentials.sql` seed INSERT now uses `OVERRIDING SYSTEM VALUE`:
+  `id` is `GENERATED ALWAYS AS IDENTITY`, so the explicit-id insert was
+  rejected by Postgres. The `0003` migration applies the same fix.
+
 ## [0.3.0] - 2026-08-24
 
 ### Added
