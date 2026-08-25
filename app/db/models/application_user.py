@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # -----------------------------------------------------------------------------
-"""SQLAlchemy models for the base_api database."""
+"""SQLAlchemy model for the application_user table."""
 # -----------------------------------------------------------------------------
 
 from datetime import datetime
@@ -88,6 +88,12 @@ class ApplicationUser(Base):
     )
 
     last_modified_by_id: Mapped[int | None] = mapped_column(Integer)
+
+    # Added by migration 0002 (the legacy table pre-dates it); maintained by
+    # the set_when_modified trigger, never written by the app.
+    when_modified: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
 
 
 # -----------------------------------------------------------------------------
