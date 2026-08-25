@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.5.0] - 2026-08-25
+
+### Added
+
+- SQLAlchemy models for the new tables (migrations 0003–0006), so the
+  credentials/session/instance schema is usable from application code:
+  - `ApiCredential` (`api_credentials`) — identity `id`, `gen_random_uuid()`
+    `user_guid`, unique `email`.
+  - `TokenBlacklist` (`token_blacklist`) — uuid `jti` primary key,
+    `application_user` FK with `ON DELETE CASCADE`, `expiry`/`user_id`
+    indexes and the table comment.
+  - `LoginSession` (`login_session`) — bigint identity `id`, bytea token
+    hash, inet, jsonb `data`, 12-hour default expiry, the named unique
+    and check constraints, and the `user_id`/`expires_at` indexes.
+  - `instance_metadata` — a Core `Table` on `Base.metadata` rather than
+    an ORM class: the singleton table has no primary key, which the ORM
+    cannot map; the unique index on `(true)` and the trigger stay in the
+    migration.
+- `ApplicationUser.when_modified` — the `timestamptz` column added by
+  migration `0002` but missing from the model (trigger-maintained, never
+  written by the app).  Models are now an exact mirror of the migrated
+  schema: `alembic revision --autogenerate` reports no diff beyond the
+  un-expressible `instance_metadata_singleton` functional index.
+
+### Changed
+
+- `app/db/models.py` is now an `app/db/models/` package with one module
+  per table; `app/db/models/__init__.py` re-exports everything, so
+  existing imports (`from app.db.models import ApplicationUser`,
+  `from app.db import models`) are unchanged.
+
 ## [0.4.0] - 2026-08-25
 
 ### Added
