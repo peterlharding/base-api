@@ -18,7 +18,7 @@ from app.db.base import Base
 # -----------------------------------------------------------------------------
 
 class ApplicationUser(Base):
-    """Mirrors the application_user table (see docker/db/03-create-application_user.sql)."""
+    """Mirrors the application_user table (see db/schema/create/03-create-application_user.sql)."""
 
     __tablename__ = "application_user"
 

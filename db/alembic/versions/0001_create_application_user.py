@@ -1,6 +1,6 @@
 """create application_user table
 
-Mirrors docker/db/03-create-application_user.sql so a fresh database can be
+Mirrors db/schema/create/03-create-application_user.sql so a fresh database can be
 built with `alembic upgrade head` instead of the psql scripts.
 
 Revision ID: 0001
@@ -19,7 +19,7 @@ depends_on = None
 
 def upgrade() -> None:
     # alembic has no create_sequence op; raw DDL keeps the migration
-    # faithful to docker/db/03-create-application_user.sql.
+    # faithful to db/schema/create/03-create-application_user.sql.
     op.execute("CREATE SEQUENCE application_user_id_seq")
     op.create_table(
         "application_user",

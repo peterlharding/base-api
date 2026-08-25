@@ -1,5 +1,9 @@
 # base-api
-A basic APIU implemented using FastAPI
+
+A basic API implemented using FastAPI
+
+See doc/* in the root folder for more extensive documentation
+
 
 ## Testing
 

@@ -45,9 +45,9 @@ make setup
 or run the scripts manually:
 
 ```sh
-docker exec -i base-db psql -U postgres -v db_password="$DB_PASSWORD" < db/schema/create/01-create-users.sql
-docker exec -i base-db psql -U postgres                               < db/schema/create/02-create-database.sql
-docker exec -i base-db psql -U postgres -d base_api                   < db/schema/create/03-create-application_user.sql
+docker exec -i base-db psql -U postgres -v db_password="$DB_PASSWORD" < ../../db/schema/create/01-create-users.sql
+docker exec -i base-db psql -U postgres                               < ../../db/schema/create/02-create-database.sql
+docker exec -i base-db psql -U postgres -d base_api                   < ../../db/schema/create/03-create-application_user.sql
 ```
 
 The scripts are idempotent — safe to re-run at any time. Re-running
@@ -77,10 +77,4 @@ should print:
 ```
 postgresql://api:$DB_PASSWORD@127.0.0.1:5432/base_api
 ```
-
-
-# NOTES
-
-1)  I have moved the SQL scripts to db/schema/create off the project root
-
 

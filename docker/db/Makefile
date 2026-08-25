@@ -15,9 +15,9 @@ down:
 # Requires DB_PASSWORD in the environment, e.g.:
 #   set -a; . ../../.env; set +a
 setup:
-	docker exec -i base-db psql -U postgres -v db_password=$(DB_PASSWORD) < 01-create-users.sql
-	docker exec -i base-db psql -U postgres < 02-create-database.sql
-	docker exec -i base-db psql -U postgres -d base_api < 03-create-application_user.sql
+	docker exec -i base-db psql -U postgres -v db_password=$(DB_PASSWORD) < ../../db/schema/create/01-create-users.sql
+	docker exec -i base-db psql -U postgres < ../../db/schema/create/02-create-database.sql
+	docker exec -i base-db psql -U postgres -d base_api < ../../db/schema/create/03-create-application_user.sql
 
 
 
