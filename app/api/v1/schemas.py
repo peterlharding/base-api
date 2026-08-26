@@ -20,9 +20,8 @@ from pydantic import BaseModel
 class UserBase(BaseModel):
     """Every writable business field of application_user."""
 
-    ref: UUID | None = None
+    user_guid: UUID | None = None
     username: str | None = None
-    user_id: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     company_name: str | None = None

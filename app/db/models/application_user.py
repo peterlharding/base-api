@@ -34,9 +34,8 @@ class ApplicationUser(Base):
         server_default=text("nextval('application_user_id_seq'::regclass)"),
     )
 
-    ref:                          Mapped[UUID | None] = mapped_column(Uuid)
+    user_guid:                    Mapped[UUID | None] = mapped_column(Uuid)
     username:                     Mapped[str | None]  = mapped_column(String(32))
-    user_id:                      Mapped[str | None]  = mapped_column(String(64))
     password:                     Mapped[str | None]  = mapped_column(String(128))
     first_name:                   Mapped[str | None]  = mapped_column(String(32))
     last_name:                    Mapped[str | None]  = mapped_column(String(32))
@@ -125,14 +124,14 @@ class ApplicationUser(Base):
     # -------------------------------------------------------------------------
 
     def __str__(self):
-        return '<User: %r <%s>>' % (self.id, self.ref)
+        return '<User: %r <%s>>' % (self.id, self.user_guid)
 
     # -------------------------------------------------------------------------
 
     def __repr__(self):
         return f"""<User:
            id: {self.id}
-          ref: {self.ref}
+     user_guid: {self.user_guid}
      username: {self.username}
    first_name: {self.first_name}
     last_name: {self.last_name}

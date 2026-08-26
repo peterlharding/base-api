@@ -4,7 +4,7 @@
 """CRUD endpoints for application_user, served under /api/v1/users.
 
 The path parameter is ``id`` — the surrogate key of the table. The legacy
-``user_id`` column (a client-side string) is an ordinary field on the model.
+``user_guid`` column (a client-side GUID) is an ordinary field on the model.
 """
 # -----------------------------------------------------------------------------
 
