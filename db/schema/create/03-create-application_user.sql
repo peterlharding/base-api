@@ -11,7 +11,7 @@ CREATE SEQUENCE IF NOT EXISTS application_user_id_seq;
 
 CREATE TABLE IF NOT EXISTS public.application_user (
     id                    integer                     NOT NULL DEFAULT nextval('application_user_id_seq'::regclass),
-    ref                   character varying(40),
+    ref                   uuid,
     username              character varying(32),
     user_id               character varying(64),
     password              character varying(128),

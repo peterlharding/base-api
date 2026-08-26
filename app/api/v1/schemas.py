@@ -10,6 +10,7 @@ last_login_date and the *_by_id stamps) are only read back, never written.
 # -----------------------------------------------------------------------------
 
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -19,7 +20,7 @@ from pydantic import BaseModel
 class UserBase(BaseModel):
     """Every writable business field of application_user."""
 
-    ref: str | None = None
+    ref: UUID | None = None
     username: str | None = None
     user_id: str | None = None
     first_name: str | None = None
