@@ -10,7 +10,7 @@ import uuid
 
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, Index, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -23,6 +23,12 @@ from app.models.base import Base
 
 class Account(Base):
     __tablename__ = "account"
+    __table_args__ = (
+        # one per foreign key: Postgres indexes the parent side only,
+        # so without these a parent delete scans this table
+        Index("account_owner_id_idx", "owner_id"),
+        Index("account_parent_id_idx", "parent_id"),
+    )
 
     id:                   Mapped[int]              = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     guid:                 Mapped[uuid.UUID | None] = mapped_column(Uuid)

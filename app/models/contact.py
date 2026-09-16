@@ -10,7 +10,7 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, String, Text, func, text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, Index, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -23,6 +23,13 @@ from app.models.base import Base
 
 class Contact(Base):
     __tablename__ = "contact"
+    __table_args__ = (
+        # one per foreign key: Postgres indexes the parent side only,
+        # so without these a parent delete scans this table
+        Index("contact_owner_id_idx", "owner_id"),
+        Index("contact_account_id_idx", "account_id"),
+        Index("contact_reports_to_id_idx", "reports_to_id"),
+    )
 
     id:                     Mapped[int]         = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     guid:                   Mapped[str | None]  = mapped_column(String(18))

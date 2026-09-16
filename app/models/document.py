@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Integer, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Index, Integer, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -20,6 +20,11 @@ from app.models.base import Base
 
 class Document(Base):
     __tablename__ = "document"
+    __table_args__ = (
+        # one per foreign key: Postgres indexes the parent side only,
+        # so without these a parent delete scans this table
+        Index("document_author_id_idx", "author_id"),
+    )
 
     id:                     Mapped[int]              = mapped_column(BigInteger, Identity(always=True), primary_key=True)
     guid:                   Mapped[uuid.UUID | None] = mapped_column(Uuid)

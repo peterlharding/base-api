@@ -12,7 +12,7 @@ diff, and so a create returns the database's own values untouched.
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Uuid, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sqlalchemy.ext.hybrid import (
@@ -32,6 +32,12 @@ class ApplicationUser(Base):
     """Mirrors the application_user table (see db/schema/create/application_user.sql)."""
 
     __tablename__ = "application_user"
+    __table_args__ = (
+        # one per foreign key: Postgres indexes the parent side only,
+        # so without these a parent delete scans this table
+        Index("application_user_delegated_approver_id_idx", "delegated_approver_id"),
+        Index("application_user_user_role_id_idx", "user_role_id"),
+    )
 
     id:                           Mapped[int]         = mapped_column(
         BigInteger, primary_key=True
