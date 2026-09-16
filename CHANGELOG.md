@@ -6,6 +6,98 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.6.0] - 2026-09-16
+
+A CRM schema lands on top of the API scaffold, and the migration history is
+squashed to accommodate it.
+
+**Breaking.**
+The migration chain was rewritten, `application_user` was redesigned, and the
+models moved package.
+An existing database cannot be migrated forward - it has to be rebuilt with
+`make setup` followed by `make migrate`.
+
+### Added
+
+- Twelve CRM resources under `/api/v1`, each with the same CRUD shape as
+  `users` (page with `limit`/`offset`, create, fetch-or-404, patch-style
+  `PUT`, delete): `accounts`, `contacts`, `tasks`, `events`, `documents`,
+  `notes`, `opportunities`, `leads`, `quotes`, `access` and `attachments`,
+  for 24 routes in total.
+- Thirteen SQLAlchemy models for the CRM and `audit_log` tables, all
+  registered on `Base.metadata` so alembic autogenerate and the test suite's
+  TRUNCATE see them.
+- `app/api/v1/crud.py` - `commit()`, `get_or_404()` and `apply_update()`,
+  shared by every endpoint module rather than repeated per resource.
+- `audit_log` table, and `db/schema/create/*.sql` for the twelve CRM tables.
+- `set_updated_at()` trigger function (`db/schema/ddl/`), installed on the
+  thirteen tables that carry an `updated_at` column.
+- Sample data: `db/schema/data/*.sql` (13 files, 2 rows each) plus
+  `scripts/seed.py`, exposed as `make seed` and `make seed-reset`.
+  Deliberately outside the migration chain - see the script's docstring.
+- `DB_PORT`, `TEST_DB_PORT` and `DB_NAME` are read from the repo-root `.env`
+  by the application, both compose stacks and the Makefiles, so the host
+  ports and database name are chosen in exactly one place.
+- `db/schema/sql/` holds the role and database bootstrap scripts, kept apart
+  from `db/schema/create/` because migrations never execute them.
+  `setup/` holds `env.template` and `SETUP.md`.
+- `CLAUDE.md`, guidance for future Claude Code sessions.
+- 141 tests, taking the suite from 15 to 156.
+
+### Changed
+
+- **`application_user` redesigned** along CRM lines: `bigint` identity primary
+  key, and `user_guid`->`guid`, `password`->`hashed_password`,
+  `timezone_key`->`timezone_sid_key`, `locale_key`->`locale_sid_key`,
+  `created_date`->`created_at`, `last_modified_date`->`updated_at`,
+  `last_modified_by_id`->`updated_by_id`, plus `phone_extension`,
+  `receives_info_emails` and `receives_admin_info_emails`.
+  `when_modified` is gone.
+  The model, API schemas and tests follow the new names.
+- **Migration chain squashed** from `0001`-`0008` to three revisions:
+  `0001` (trigger function + `application_user`), `0002` (the API tables) and
+  `0003` (the twelve CRM tables).
+  Migrations now execute SQL from `db/schema/`, resolved from `__file__`
+  rather than the working directory.
+- `db/schema/create/*.sql` is migration payload rather than standalone
+  bootstrap, so the `DROP TABLE IF EXISTS` headers were removed - a re-run
+  would otherwise destroy data.
+- `make setup` creates the roles and an **empty** database only; alembic owns
+  every table.
+  Dev and test are therefore built by the identical path and cannot drift.
+- `app/db/models/` moved to `app/models/`, and `app/db/base.py` to
+  `app/models/base.py`, so the declarative base sits with the models.
+- `token_blacklist.user_id` and `login_session.user_id` widened from
+  `integer` to `bigint` to match `application_user.id`.
+- The test suite truncates **before** each test rather than after, so a stray
+  row left in the container cannot fail the first test of a run.
+- `db/alembic.ini` resolves `script_location` with `%(here)s`, so the
+  `alembic` CLI and `pytest` both work from any directory.
+
+### Removed
+
+- `.env.example`, superseded by `setup/env.template`.
+- `db/schema/create/03-create-application_user.sql`, superseded by
+  `application_user.sql`.
+- `db/schema/ddl/set_when_modified.sql`, superseded by `set_updated_at.sql`.
+
+### Fixed
+
+- `make setup` failed with `syntax error at or near ":"`.
+  psql does not substitute `:variables` inside a dollar-quoted `$$ ... $$`
+  block, so the server received a literal `:db_password`.
+  The role DDL is now generated outside any dollar quote and run with
+  `\gexec`.
+- psql is invoked with `-v ON_ERROR_STOP=1` throughout.
+  Reading a script from stdin it otherwise reports an error and still exits
+  0, so `make` stepped over the failure and the real cause was buried.
+- A duplicate email returned 500 rather than 409.
+  `commit()` now translates unique violations to **409** and foreign-key,
+  not-null and check violations to **400**, rolling back first so the session
+  stays usable.
+- `db/alembic/env.py` and `tests/conftest.py` still imported the old
+  `app.db.models` path and failed at import.
+
 ## [0.5.0] - 2026-08-25
 
 ### Added
