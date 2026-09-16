@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.8.0] - 2026-09-17
+
+### Changed
+
+- **Breaking for clients sending unknown fields.**
+  The `*Create` and `*Update` schemas set `extra="forbid"`, so a field the
+  schema does not define is a **422** naming it, rather than being silently
+  dropped.
+  Previously a `POST` carrying a misspelled field returned 201 with the value
+  discarded, and a `PUT` carrying only misspelled fields returned 400
+  "No fields provided to update" without saying which field was wrong.
+  An empty `PUT` body carries no unknown field and is still the 400.
+  The response schemas stay permissive: they are validated from ORM objects,
+  not caller-supplied dicts.
+
+### Added
+
+- `TODO.md`, recording the outstanding work and the deliberate non-goals.
+- `tests/test_payload_validation.py`, covering all twelve resources.
+
 ## [0.7.1] - 2026-09-17
 
 ### Added
