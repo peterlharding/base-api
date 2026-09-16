@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.7.1] - 2026-09-17
+
+### Added
+
+- Migration `0005` indexes the 25 foreign key columns added in `0004`.
+  Postgres indexes only the parent side of a foreign key, so a parent delete
+  was scanning every referencing table to find the rows to set to NULL.
+  Measured on `contact`: indistinguishable at 50k rows, roughly 4x faster at
+  1M (47ms to 12ms), and widening, since the scan is O(n) and the lookup is
+  not.
+  Named `<table>_<column>_idx`, matching `login_session` and
+  `token_blacklist`.
+  Built inside the migration transaction rather than `CONCURRENTLY`: these
+  tables are small enough that the lock is momentary, and a transactional
+  build leaves nothing behind if it fails.
+
 ## [0.7.0] - 2026-09-16
 
 ### Added
