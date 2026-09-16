@@ -1,4 +1,47 @@
 
+# v0.7.1
+
+Done. Migration 0005 indexes all 25 foreign key columns.
+
+## The measurement
+
+I set out to verify this actually helps rather than assert it, and the first two attempts were wrong in instructive ways.
+
+Attempt 1 pointed all 50,000 contacts at one account. The planner chose a seq scan correctly - when a predicate matches every row, scanning is cheaper than an index. Bad test, not a bad index.
+
+Attempt 2 spread 50,000 contacts across 200 accounts. The index was used (Bitmap Index Scan on contact_account_id_idx), but the timings were identical with and without it - roughly 5ms either way. At that size the scan is cheap enough that the SET NULL update dominates.
+
+Attempt 3, at 1M rows across 2,000 accounts, is where it shows:
+
+```
+with index:     9.1 ms   14.1 ms   11.7 ms
+without index: 49.2 ms   47.5 ms   46.4 ms
+```
+
+About 4x, and widening - the scan is O(n) while the lookup isn't. So the honest summary is that this does nothing at your current volumes and matters once these tables get large, which is the reason to add it now rather than later.
+
+## Verified
+
+```
+fresh build             0001..0005, 35 non-pkey indexes
+unindexed FK columns    0
+downgrade round trip    35 -> 10 -> 35
+dev upgraded in place   0004 -> 0005, seed rows intact
+dev vs test schema      identical (indexes and constraints)
+autogenerate drift      only instance_metadata_singleton
+make test               164 passed
+```
+
+The indexes are declared in each model's __table_args__ too, so autogenerate stays clean - without that it would have proposed dropping all 25, the same trap the CRM models hit earlier.
+
+## Two choices worth knowing
+
+Built inside the transaction, not CONCURRENTLY. A transactional build is atomic and leaves nothing behind on failure, and at these sizes the write lock is momentary. CREATE
+INDEX CONCURRENTLY can't run in a transaction and can leave an invalid inde right call only once the lock duration actually matters. That reasoningis in the migration docstring.
+
+Naming follows <table>_<column>_idx, matching login_session_user_id_idx and token_blacklist_user_id_idx rather than SQLAlchemy's ix_ default.                                
+CLAUDE.md/AGENTS.md had this listed as an open gap; that's now replaced with the measurement and a note that any new foreign key should get its index in the same migration. Changelog has a fresh [Unreleased] section.
+
 
 # v0.2.0
 

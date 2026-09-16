@@ -13,7 +13,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # -----------------------------------------------------------------------------
@@ -61,6 +61,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Payload for POST /users; only username is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     username: str
 
 
@@ -68,6 +70,8 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     """Payload for PUT /users/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -148,6 +152,8 @@ class ContactBase(BaseModel):
 class ContactCreate(ContactBase):
     """Payload for POST /contacts; only last_name is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     last_name: str
 
 
@@ -155,6 +161,8 @@ class ContactCreate(ContactBase):
 
 class ContactUpdate(ContactBase):
     """Payload for PUT /contacts/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -224,6 +232,8 @@ class AccountBase(BaseModel):
 class AccountCreate(AccountBase):
     """Payload for POST /accounts; only name is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
 
 
@@ -231,6 +241,8 @@ class AccountCreate(AccountBase):
 
 class AccountUpdate(AccountBase):
     """Payload for PUT /accounts/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -287,6 +299,8 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     """Payload for POST /tasks; only subject is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     subject: str
 
 
@@ -294,6 +308,8 @@ class TaskCreate(TaskBase):
 
 class TaskUpdate(TaskBase):
     """Payload for PUT /tasks/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -356,6 +372,8 @@ class EventBase(BaseModel):
 class EventCreate(EventBase):
     """Payload for POST /events; only subject is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     subject: str
 
 
@@ -363,6 +381,8 @@ class EventCreate(EventBase):
 
 class EventUpdate(EventBase):
     """Payload for PUT /events/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -408,6 +428,8 @@ class DocumentBase(BaseModel):
 class DocumentCreate(DocumentBase):
     """Payload for POST /documents; only name is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
 
 
@@ -415,6 +437,8 @@ class DocumentCreate(DocumentBase):
 
 class DocumentUpdate(DocumentBase):
     """Payload for PUT /documents/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -453,6 +477,8 @@ class NoteBase(BaseModel):
 class NoteCreate(NoteBase):
     """Payload for POST /notes; only title is mandatory."""
 
+    model_config = ConfigDict(extra="forbid")
+
     title: str
 
 
@@ -460,6 +486,8 @@ class NoteCreate(NoteBase):
 
 class NoteUpdate(NoteBase):
     """Payload for PUT /notes/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -519,6 +547,8 @@ class OpportunityCreate(OpportunityBase):
     (api-level: the column is nullable in the database).
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
 
 
@@ -526,6 +556,8 @@ class OpportunityCreate(OpportunityBase):
 
 class OpportunityUpdate(OpportunityBase):
     """Payload for PUT /opportunities/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -596,6 +628,8 @@ class LeadCreate(LeadBase):
     (api-level: the column is nullable in the database).
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     last_name: str
 
 
@@ -603,6 +637,8 @@ class LeadCreate(LeadBase):
 
 class LeadUpdate(LeadBase):
     """Payload for PUT /leads/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -653,6 +689,8 @@ class QuoteCreate(QuoteBase):
     (quoter is NOT NULL in the database, so this one is not a choice).
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     quoter: str
 
 
@@ -660,6 +698,8 @@ class QuoteCreate(QuoteBase):
 
 class QuoteUpdate(QuoteBase):
     """Payload for PUT /quotes/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -698,6 +738,8 @@ class AccessCreate(AccessBase):
     (api-level: every column on this table is nullable).
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     reference_type: str
 
 
@@ -705,6 +747,8 @@ class AccessCreate(AccessBase):
 
 class AccessUpdate(AccessBase):
     """Payload for PUT /access/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
@@ -744,6 +788,8 @@ class AttachmentCreate(AttachmentBase):
     (api-level: the column is nullable in the database).
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     name: str
 
 
@@ -751,6 +797,8 @@ class AttachmentCreate(AttachmentBase):
 
 class AttachmentUpdate(AttachmentBase):
     """Payload for PUT /attachments/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------

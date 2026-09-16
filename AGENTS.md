@@ -186,8 +186,9 @@ Server-managed columns are deliberately absent from the write schemas - `hashed_
 
 Only `application_user.email` carries a UNIQUE constraint today, so no other resource can produce a 409 yet; the handling is in place for when they gain one.
 
-Unknown fields in a payload are silently dropped (pydantic's default `extra="ignore"`).
-A `POST` carrying a misspelled field therefore returns 201 with it discarded, and a `PUT` carrying only misspelled fields returns 400 "No fields provided to update" rather than naming the offender.
+Unknown fields in a payload are rejected: the `*Create` and `*Update` schemas set `extra="forbid"`, so a misspelled field is a **422** naming it, rather than being silently dropped.
+An empty `PUT` body carries no unknown field and is still the 400.
+The response schemas stay permissive on purpose - they are validated from ORM objects, not caller-supplied dicts.
 
 `event.account_id` and `event.owner_id` are **varchar(18)** on that table, not bigint as the same column names are everywhere else, and the schema types them as strings to match.
 
