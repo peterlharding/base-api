@@ -31,16 +31,18 @@ def test_create_minimal_populates_defaults(client) -> None:
     assert body["username"] == "alice"
     # Server defaults come through untouched:
     assert body["is_active"] is True
-    assert body["timezone_key"] == "Australia/Melbourne"
+    assert body["timezone_sid_key"] == "Australia/Melbourne"
     assert body["user_type"] == "Standard"
-    assert body["locale_key"] == "en_AU"
+    assert body["locale_sid_key"] == "en_AU"
     assert body["email_encoding_key"] == "ISO-8859-1"
+    assert body["receives_info_emails"] is False
+    assert body["receives_admin_info_emails"] is False
     assert body["start_day"] == 6
     assert body["end_day"] == 23
-    assert body["created_date"] is not None
-    assert body["last_modified_date"] is not None
+    assert body["created_at"] is not None
+    assert body["updated_at"] is not None
     # Never exposed:
-    assert "password" not in body
+    assert "hashed_password" not in body
 
 
 # -----------------------------------------------------------------------------
@@ -103,6 +105,68 @@ def test_delete(client) -> None:
     created = client.post("/api/v1/users", json={"username": "erin"}).json()
     assert client.delete(f"/api/v1/users/{created['id']}").status_code == 204
     assert client.get(f"/api/v1/users/{created['id']}").status_code == 404
+
+
+# -----------------------------------------------------------------------------
+
+def test_create_duplicate_email_409(client) -> None:
+    """application_user.email is UNIQUE; a clash is a conflict, not a 500."""
+    first = client.post(
+        "/api/v1/users", json={"username": "one", "email": "dup@example.com"}
+    )
+    assert first.status_code == 201
+
+    clash = client.post(
+        "/api/v1/users", json={"username": "two", "email": "dup@example.com"}
+    )
+    assert clash.status_code == 409
+    assert "email" in clash.json()["detail"]
+
+
+# -----------------------------------------------------------------------------
+
+def test_update_to_duplicate_email_409(client) -> None:
+    client.post("/api/v1/users", json={"username": "one", "email": "a@example.com"})
+    second = client.post(
+        "/api/v1/users", json={"username": "two", "email": "b@example.com"}
+    ).json()
+
+    r = client.put(
+        f"/api/v1/users/{second['id']}", json={"email": "a@example.com"}
+    )
+    assert r.status_code == 409
+
+
+# -----------------------------------------------------------------------------
+
+def test_session_still_usable_after_conflict(client) -> None:
+    """The rollback in _commit leaves the connection healthy for the next call."""
+    client.post("/api/v1/users", json={"username": "one", "email": "dup@example.com"})
+    assert client.post(
+        "/api/v1/users", json={"username": "two", "email": "dup@example.com"}
+    ).status_code == 409
+
+    ok = client.post(
+        "/api/v1/users", json={"username": "three", "email": "fresh@example.com"}
+    )
+    assert ok.status_code == 201
+    assert len(client.get("/api/v1/users").json()) == 2
+
+
+# -----------------------------------------------------------------------------
+
+def test_duplicate_email_leaves_no_row(client) -> None:
+    client.post("/api/v1/users", json={"username": "one", "email": "dup@example.com"})
+    client.post("/api/v1/users", json={"username": "two", "email": "dup@example.com"})
+    assert [u["username"] for u in client.get("/api/v1/users").json()] == ["one"]
+
+
+# -----------------------------------------------------------------------------
+
+def test_null_emails_do_not_clash(client) -> None:
+    """UNIQUE allows many NULLs, so users without an email are unaffected."""
+    assert client.post("/api/v1/users", json={"username": "one"}).status_code == 201
+    assert client.post("/api/v1/users", json={"username": "two"}).status_code == 201
 
 
 # -----------------------------------------------------------------------------

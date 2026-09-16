@@ -3,35 +3,29 @@
 # -----------------------------------------------------------------------------
 """CRUD endpoints for application_user, served under /api/v1/users.
 
-The path parameter is ``id`` — the surrogate key of the table. The legacy
-``user_guid`` column (a client-side GUID) is an ordinary field on the model.
+The path parameter is the surrogate key ``id``.  The ``guid`` column (a
+client-side GUID) is an ordinary field on the model, not the path parameter.
 """
 # -----------------------------------------------------------------------------
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.v1 import schemas
-from app.db.models import ApplicationUser
-from app.db.session import get_db
+
+# -----------------------------------------------------------------------------
+
+from app.api.v1      import schemas
+from app.api.v1.crud import apply_update, commit, get_or_404
+from app.models      import ApplicationUser
+from app.db.session  import get_db
 
 
 # -----------------------------------------------------------------------------
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-
-# -----------------------------------------------------------------------------
-
-def _get_or_404(db: Session, user_id: int) -> ApplicationUser:
-    user = db.get(ApplicationUser, user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found",
-        )
-    return user
+_LABEL = "user"
 
 
 # -----------------------------------------------------------------------------
@@ -53,7 +47,7 @@ def list_users(
 def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> ApplicationUser:
     user = ApplicationUser(**payload.model_dump(exclude_unset=True))
     db.add(user)
-    db.commit()
+    commit(db, ApplicationUser, _LABEL)
     db.refresh(user)
     return user
 
@@ -63,7 +57,7 @@ def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> A
 @router.get("/{user_pk}", response_model=schemas.User)
 def get_user(user_pk: int, db: Session = Depends(get_db)) -> ApplicationUser:
     """Fetch a single user by surrogate key."""
-    return _get_or_404(db, user_pk)
+    return get_or_404(db, ApplicationUser, user_pk, _LABEL)
 
 
 # -----------------------------------------------------------------------------
@@ -75,16 +69,9 @@ def update_user(
     db: Session = Depends(get_db),
 ) -> ApplicationUser:
     """Patch a user: only the fields present in the payload are changed."""
-    user = _get_or_404(db, user_pk)
-    fields = payload.model_dump(exclude_unset=True)
-    if not fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields provided to update",
-        )
-    for name, value in fields.items():
-        setattr(user, name, value)
-    db.commit()
+    user = get_or_404(db, ApplicationUser, user_pk, _LABEL)
+    apply_update(user, payload.model_dump(exclude_unset=True))
+    commit(db, ApplicationUser, _LABEL)
     db.refresh(user)
     return user
 
@@ -93,9 +80,9 @@ def update_user(
 
 @router.delete("/{user_pk}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_pk: int, db: Session = Depends(get_db)) -> None:
-    user = _get_or_404(db, user_pk)
+    user = get_or_404(db, ApplicationUser, user_pk, _LABEL)
     db.delete(user)
-    db.commit()
+    commit(db, ApplicationUser, _LABEL)
 
 
 # -----------------------------------------------------------------------------

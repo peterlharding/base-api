@@ -1,24 +1,30 @@
 
+-- ---------------------------------------------------------------------------
+
 CREATE TABLE public.instance_metadata (
     release       text        NOT NULL,
     app_version   text        NOT NULL,
     db_version    text        NOT NULL,
     notes         text        NOT NULL DEFAULT '',
-    when_modified timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now(),
 
     CONSTRAINT instance_metadata_release_check CHECK (release IN ('dev', 'test', 'staging', 'prod')),
     CONSTRAINT instance_metadata_app_version_check CHECK (app_version ~ '^v\d+\.\d+\.\d+$'),
     CONSTRAINT instance_metadata_db_version_check  CHECK (db_version  ~ '^v\d+\.\d+\.\d+$')
 );
+-- ---------------------------------------------------------------------------
 
 CREATE UNIQUE INDEX instance_metadata_singleton ON public.instance_metadata ((true));
 
-CREATE TRIGGER instance_metadata_set_when_modified
+-- ---------------------------------------------------------------------------
+
+CREATE TRIGGER instance_metadata_set_updated_at
     BEFORE UPDATE ON public.instance_metadata
     FOR EACH ROW
     WHEN (OLD.* IS DISTINCT FROM NEW.*)
-    EXECUTE FUNCTION public.set_when_modified();
+    EXECUTE FUNCTION public.set_updated_at();
 
+-- ---------------------------------------------------------------------------
 
 -- On Update
 

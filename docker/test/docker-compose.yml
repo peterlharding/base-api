@@ -1,10 +1,13 @@
 # Dedicated Postgres for the test suite (see doc/TESTING.md).
 #
 # Deliberately separate from the dev stack in docker/db/:
-#   * different port (5433) so dev and tests can run at the same time
+#   * a different port from the dev stack, so both can run at the same time
 #   * different database (base_api_test) so tests can never touch dev data
 #   * no volume: `docker compose down` discards the data -> a clean slate
-#   * no .env lookup: self-contained, so tests never touch dev credentials
+#   * credentials stay pinned here, so tests never touch dev credentials.
+#     Only the published port comes from the repo-root .env, and under its
+#     own key (TEST_DB_PORT), so pointing DB_PORT at dev cannot redirect
+#     the tests.  The Makefile passes it:  --env-file .env
 
 services:
 
@@ -18,4 +21,4 @@ services:
       POSTGRES_PASSWORD: test
       POSTGRES_DB: base_api_test
     ports:
-      - 127.0.0.1:5433:5432
+      - "127.0.0.1:${TEST_DB_PORT:-5433}:5432"

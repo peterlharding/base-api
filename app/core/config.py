@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     api_port: int = 8091
 
-    # Postgres connection (see docker/db/SETUP.md)
+    # Postgres connection (see setup/SETUP.md)
     db_user: str = "api"
     db_password: str = ""
     db_host: str = "127.0.0.1"

@@ -3,13 +3,14 @@
 # -----------------------------------------------------------------------------
 """Pydantic schemas for the version 1 API.
 
-Mirrors application_user minus the server-managed parts: ``password`` is
-never exposed, and the audit columns (created_date / last_modified_date /
+Mirrors application_user minus the server-managed parts: ``hashed_password``
+is never exposed, and the audit columns (created_at / updated_at /
 last_login_date and the *_by_id stamps) are only read back, never written.
 """
 # -----------------------------------------------------------------------------
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -20,7 +21,7 @@ from pydantic import BaseModel
 class UserBase(BaseModel):
     """Every writable business field of application_user."""
 
-    user_guid: UUID | None = None
+    guid: UUID | None = None
     username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
@@ -35,14 +36,17 @@ class UserBase(BaseModel):
     country: str | None = None
     email: str | None = None
     phone: str | None = None
+    phone_extension: str | None = None
     fax: str | None = None
     mobile_phone: str | None = None
     alias: str | None = None
     is_active: bool | None = None
-    timezone_key: str | None = None
+    timezone_sid_key: str | None = None
     user_role_id: int | None = None
-    locale_key: str | None = None
+    locale_sid_key: str | None = None
     email_encoding_key: str | None = None
+    receives_info_emails: bool | None = None
+    receives_admin_info_emails: bool | None = None
     profile_id: int | None = None
     employee_number: str | None = None
     user_type: str | None = None
@@ -73,8 +77,690 @@ class User(UserBase):
 
     id: int
     last_login_date: datetime | None = None
-    created_date: datetime | None = None
-    last_modified_date: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Contact
+#
+# Mirrors contact minus the server-managed parts: created_at / updated_at are
+# read back but never written, and the *_by_id audit stamps are neither.
+# `guid` here is an 18-character Salesforce-style id, not a uuid.
+
+
+class ContactBase(BaseModel):
+    """Every writable business field of contact."""
+
+    guid: str | None = None
+
+    salutation: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+
+    title: str | None = None
+    department: str | None = None
+    account_id: int | None = None
+
+    description: str | None = None
+    notes: str | None = None
+
+    other_street: str | None = None
+    other_city: str | None = None
+    other_state: str | None = None
+    other_postal_code: str | None = None
+    other_country: str | None = None
+
+    mailing_street: str | None = None
+    mailing_city: str | None = None
+    mailing_state: str | None = None
+    mailing_postal_code: str | None = None
+    mailing_country: str | None = None
+
+    phone: str | None = None
+    fax: str | None = None
+    mobile_phone: str | None = None
+    home_phone: str | None = None
+    other_phone: str | None = None
+    email: str | None = None
+
+    assistant_name: str | None = None
+    assistant_phone: str | None = None
+
+    reports_to_id: int | None = None
+    owner_id: int | None = None
+
+    lead_source: str | None = None
+    birthdate: date | None = None
+
+    do_not_call: bool | None = None
+    has_opted_out_of_email: bool | None = None
+    has_opted_out_of_fax: bool | None = None
+
+    last_activity_date: datetime | None = None
+    is_deleted: bool | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class ContactCreate(ContactBase):
+    """Payload for POST /contacts; only last_name is mandatory."""
+
+    last_name: str
+
+
+# -----------------------------------------------------------------------------
+
+class ContactUpdate(ContactBase):
+    """Payload for PUT /contacts/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Contact(ContactBase):
+    """A contact as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Account
+#
+# Same split as Contact.  `guid` and `record_type_ref` are real uuids here.
+
+
+class AccountBase(BaseModel):
+    """Every writable business field of account."""
+
+    guid: UUID | None = None
+
+    name: str | None = None
+    type: str | None = None
+    description: str | None = None
+    notes: str | None = None
+
+    record_type_ref: UUID | None = None
+    parent_id: int | None = None
+
+    billing_street: str | None = None
+    billing_city: str | None = None
+    billing_state: str | None = None
+    billing_postal_code: str | None = None
+    billing_country: str | None = None
+
+    shipping_street: str | None = None
+    shipping_city: str | None = None
+    shipping_state: str | None = None
+    shipping_postal_code: str | None = None
+    shipping_country: str | None = None
+
+    phone: str | None = None
+    fax: str | None = None
+
+    account_number: str | None = None
+    website: str | None = None
+    sic: str | None = None
+    industry: str | None = None
+    annual_revenue: str | None = None
+    number_of_employees: str | None = None
+    ownership: str | None = None
+    ticker_symbol: str | None = None
+    rating: str | None = None
+    site: str | None = None
+
+    owner_id: int | None = None
+    is_deleted: bool | None = None
+
+    last_activity_date: date | None = None
+    operating_systems: str | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class AccountCreate(AccountBase):
+    """Payload for POST /accounts; only name is mandatory."""
+
+    name: str
+
+
+# -----------------------------------------------------------------------------
+
+class AccountUpdate(AccountBase):
+    """Payload for PUT /accounts/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Account(AccountBase):
+    """An account as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Task
+#
+# Mirrors task minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class TaskBase(BaseModel):
+    """Every writable business field of task."""
+
+    guid: UUID | None = None
+    subject: str | None = None
+    description: str | None = None
+    type: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    who_type: str | None = None
+    who_id: int | None = None
+    who_ref: str | None = None
+    what_type: str | None = None
+    what_id: int | None = None
+    what_ref: str | None = None
+    is_closed: bool | None = None
+    is_deleted: bool | None = None
+    is_archived: bool | None = None
+    owner_id: int | None = None
+    account_id: int | None = None
+    activity_date: datetime | None = None
+    call_duration_in_seconds: int | None = None
+    call_type: str | None = None
+    call_disposition: str | None = None
+    call_object: str | None = None
+    is_reminder_set: bool | None = None
+    reminder_datetime: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class TaskCreate(TaskBase):
+    """Payload for POST /tasks; only subject is mandatory."""
+
+    subject: str
+
+
+# -----------------------------------------------------------------------------
+
+class TaskUpdate(TaskBase):
+    """Payload for PUT /tasks/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Task(TaskBase):
+    """A task as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Event
+#
+# Mirrors event minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class EventBase(BaseModel):
+    """Every writable business field of event."""
+
+    guid: str | None = None
+    who_ref: str | None = None
+    what_ref: str | None = None
+    subject: str | None = None
+    description: str | None = None
+    location: str | None = None
+    type: str | None = None
+    show_as: str | None = None
+    activity_date: date | None = None
+    activity_datetime: datetime | None = None
+    is_all_day_event: bool | None = None
+    duration_in_minutes: int | None = None
+    account_id: str | None = None
+    owner_id: str | None = None
+    is_group_event: bool | None = None
+    is_private: bool | None = None
+    is_child: bool | None = None
+    is_archived: bool | None = None
+    is_deleted: bool | None = None
+    is_recurrence: bool | None = None
+    recurrence_activity_id: str | None = None
+    recurrence_start_datetime: datetime | None = None
+    recurrence_end_date_only: date | None = None
+    recurrence_timezone_sid_key: str | None = None
+    recurrence_type: str | None = None
+    recurrence_interval: str | None = None
+    recurrence_day_of_week_mask: str | None = None
+    recurrence_day_of_month: str | None = None
+    recurrence_instance: str | None = None
+    recurrence_month_of_year: str | None = None
+    is_reminder_set: bool | None = None
+    reminder_datetime: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class EventCreate(EventBase):
+    """Payload for POST /events; only subject is mandatory."""
+
+    subject: str
+
+
+# -----------------------------------------------------------------------------
+
+class EventUpdate(EventBase):
+    """Payload for PUT /events/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Event(EventBase):
+    """A event as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Document
+#
+# Mirrors document minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class DocumentBase(BaseModel):
+    """Every writable business field of document."""
+
+    guid: UUID | None = None
+    name: str | None = None
+    content_type: str | None = None
+    type: str | None = None
+    url: str | None = None
+    description: str | None = None
+    keywords: str | None = None
+    body_length: int | None = None
+    body_length_compressed: int | None = None
+    author_id: int | None = None
+    author_details: str | None = None
+    folder_ref: UUID | None = None
+    is_deleted: bool | None = None
+    is_public: bool | None = None
+    is_internal_use_only: bool | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class DocumentCreate(DocumentBase):
+    """Payload for POST /documents; only name is mandatory."""
+
+    name: str
+
+
+# -----------------------------------------------------------------------------
+
+class DocumentUpdate(DocumentBase):
+    """Payload for PUT /documents/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Document(DocumentBase):
+    """A document as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Note
+#
+# Mirrors note minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class NoteBase(BaseModel):
+    """Every writable business field of note."""
+
+    guid: UUID | None = None
+    title: str | None = None
+    body: str | None = None
+    parent_type: str | None = None
+    parent_id: int | None = None
+    is_deleted: bool | None = None
+    is_private: bool | None = None
+    owner_id: int | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class NoteCreate(NoteBase):
+    """Payload for POST /notes; only title is mandatory."""
+
+    title: str
+
+
+# -----------------------------------------------------------------------------
+
+class NoteUpdate(NoteBase):
+    """Payload for PUT /notes/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Note(NoteBase):
+    """A note as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Opportunity
+#
+# Mirrors opportunity minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class OpportunityBase(BaseModel):
+    """Every writable business field of opportunity."""
+
+    guid: UUID | None = None
+    name: str | None = None
+    description: str | None = None
+    stage_name: str | None = None
+    amount: str | None = None
+    probability: str | None = None
+    expected_revenue: str | None = None
+    total_opportunity_quantity: str | None = None
+    type: str | None = None
+    next_step: str | None = None
+    account_id: int | None = None
+    owner_id: int | None = None
+    lead_source: str | None = None
+    is_private: bool | None = None
+    is_closed: bool | None = None
+    is_won: bool | None = None
+    is_deleted: bool | None = None
+    forecast_category: str | None = None
+    campaign_ref: UUID | None = None
+    has_opportunity_line_item: bool | None = None
+    pricebook_ref: UUID | None = None
+    close_date: datetime | None = None
+    last_activity_date: datetime | None = None
+    fiscal_year: str | None = None
+    fiscal_quarter: str | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class OpportunityCreate(OpportunityBase):
+    """Payload for POST /opportunities; only name is mandatory
+    (api-level: the column is nullable in the database).
+    """
+
+    name: str
+
+
+# -----------------------------------------------------------------------------
+
+class OpportunityUpdate(OpportunityBase):
+    """Payload for PUT /opportunities/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Opportunity(OpportunityBase):
+    """Opportunity as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Lead
+#
+# Mirrors lead minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class LeadBase(BaseModel):
+    """Every writable business field of lead."""
+
+    guid: UUID | None = None
+    description: str | None = None
+    salutation: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    title: str | None = None
+    company: str | None = None
+    street: str | None = None
+    city: str | None = None
+    state: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
+    phone: str | None = None
+    mobile_phone: str | None = None
+    fax: str | None = None
+    email: str | None = None
+    website: str | None = None
+    lead_source: str | None = None
+    status: str | None = None
+    industry: str | None = None
+    rating: str | None = None
+    annual_revenue: str | None = None
+    number_of_employees: str | None = None
+    owner_id: int | None = None
+    do_not_call: bool | None = None
+    has_opted_out_of_fax: bool | None = None
+    has_opted_out_of_email: bool | None = None
+    is_unread_by_owner: bool | None = None
+    is_deleted: bool | None = None
+    is_converted: bool | None = None
+    converted_date: datetime | None = None
+    converted_account_id: int | None = None
+    converted_contact_id: int | None = None
+    converted_opportunity_id: int | None = None
+    activity_date: datetime | None = None
+    transfer_date: datetime | None = None
+    operating_systems: str | None = None
+    master_record_ref: str | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class LeadCreate(LeadBase):
+    """Payload for POST /leads; only last_name is mandatory
+    (api-level: the column is nullable in the database).
+    """
+
+    last_name: str
+
+
+# -----------------------------------------------------------------------------
+
+class LeadUpdate(LeadBase):
+    """Payload for PUT /leads/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Lead(LeadBase):
+    """Lead as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Quote
+#
+# Mirrors quote minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class QuoteBase(BaseModel):
+    """Every writable business field of quote."""
+
+    quote_date: date | None = None
+    quote_amount: Decimal | None = None
+    quoter: str | None = None
+    quoter_id: int | None = None
+    account_id: int | None = None
+    company: str | None = None
+    contact_id: int | None = None
+    contact: str | None = None
+    comment: str | None = None
+    description: str | None = None
+    order_no: str | None = None
+    order_date: date | None = None
+    order_amount: Decimal | None = None
+    invoice_no: str | None = None
+    invoice_date: date | None = None
+    invoice_amount: Decimal | None = None
+    status: str | None = None
+    doc_path: str | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class QuoteCreate(QuoteBase):
+    """Payload for POST /quotes; only quoter is mandatory
+    (quoter is NOT NULL in the database, so this one is not a choice).
+    """
+
+    quoter: str
+
+
+# -----------------------------------------------------------------------------
+
+class QuoteUpdate(QuoteBase):
+    """Payload for PUT /quotes/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Quote(QuoteBase):
+    """Quote as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# Access
+#
+# Mirrors access, which carries no audit columns at all - no
+# created_at / updated_at / *_by_id, and so no set_updated_at trigger.
+
+
+class AccessBase(BaseModel):
+    """Every writable business field of access."""
+
+    access_type: str | None = None
+    reference_name: str | None = None
+    reference_type: str | None = None
+    reference_id: int | None = None
+    owner_id: int | None = None
+    user_id: int | None = None
+    last_referenced_date: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class AccessCreate(AccessBase):
+    """Payload for POST /access; only reference_type is mandatory
+    (api-level: every column on this table is nullable).
+    """
+
+    reference_type: str
+
+
+# -----------------------------------------------------------------------------
+
+class AccessUpdate(AccessBase):
+    """Payload for PUT /access/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Access(AccessBase):
+    """Access as returned by the API.  No audit timestamps on this table."""
+
+    id: int
+
+
+# -----------------------------------------------------------------------------
+# Attachment
+#
+# Mirrors attachment minus the server-managed parts: created_at /
+# updated_at are read back but never written, and the *_by_id audit stamps are
+# neither.
+
+
+class AttachmentBase(BaseModel):
+    """Every writable business field of attachment."""
+
+    guid: UUID | None = None
+    name: str | None = None
+    content_type: str | None = None
+    body_length: int | None = None
+    body_length_compressed: int | None = None
+    parent_id: int | None = None
+    owner_id: int | None = None
+    is_deleted: bool | None = None
+    is_private: bool | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class AttachmentCreate(AttachmentBase):
+    """Payload for POST /attachments; only name is mandatory
+    (api-level: the column is nullable in the database).
+    """
+
+    name: str
+
+
+# -----------------------------------------------------------------------------
+
+class AttachmentUpdate(AttachmentBase):
+    """Payload for PUT /attachments/{id}; all fields optional (patch-style)."""
+
+
+# -----------------------------------------------------------------------------
+
+class Attachment(AttachmentBase):
+    """Attachment as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 # -----------------------------------------------------------------------------

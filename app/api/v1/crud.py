@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+#
+# -----------------------------------------------------------------------------
+"""Helpers shared by the version 1 endpoint modules.
+
+Every resource follows the same shape - page, create, fetch-or-404,
+patch-style update, delete - so the parts that differ only by model live here
+rather than being repeated per resource.
+"""
+# -----------------------------------------------------------------------------
+
+from typing import TypeVar
+
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.models.base import Base
+
+
+# -----------------------------------------------------------------------------
+
+ModelT = TypeVar("ModelT", bound=Base)
+
+
+# -----------------------------------------------------------------------------
+# Postgres SQLSTATEs worth translating into a 4xx.  psycopg exposes the code on
+# IntegrityError.orig.sqlstate; without this the violation escapes as a 500.
+
+_UNIQUE_VIOLATION      = "23505"
+_FOREIGN_KEY_VIOLATION = "23503"
+_NOT_NULL_VIOLATION    = "23502"
+_CHECK_VIOLATION       = "23514"
+
+
+# -----------------------------------------------------------------------------
+
+def _conflict_field(exc: IntegrityError, table: str) -> str | None:
+    """Best-effort name of the field behind a unique violation.
+
+    Postgres reports the constraint (``application_user_email_key``) but leaves
+    ``diag.column_name`` empty for unique violations, so the field is derived
+    from the constraint name rather than read off the error.
+    """
+    diag = getattr(exc.orig, "diag", None)
+    name = getattr(diag, "constraint_name", None)
+    if not name:
+        return None
+    name = name.removeprefix(f"{table}_")
+    return name.removesuffix("_key") or None
+
+
+# -----------------------------------------------------------------------------
+
+def commit(db: Session, model: type[ModelT], label: str) -> None:
+    """Commit, turning constraint violations into 4xx instead of a 500.
+
+    The session is rolled back first: after an IntegrityError the transaction
+    is aborted, and any later use of the session would fail too.
+    """
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        sqlstate = getattr(exc.orig, "sqlstate", None)
+
+        if sqlstate == _UNIQUE_VIOLATION:
+            field = _conflict_field(exc, model.__tablename__)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"A {label} with this {field} already exists" if field
+                    else "That value is already taken"
+                ),
+            ) from exc
+
+        if sqlstate in (_FOREIGN_KEY_VIOLATION, _NOT_NULL_VIOLATION, _CHECK_VIOLATION):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The request violates a database constraint",
+            ) from exc
+
+        raise
+
+
+# -----------------------------------------------------------------------------
+
+def get_or_404(db: Session, model: type[ModelT], pk: int, label: str) -> ModelT:
+    """Fetch by surrogate key, or raise 404."""
+    row = db.get(model, pk)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{label.capitalize()} {pk} not found",
+        )
+    return row
+
+
+# -----------------------------------------------------------------------------
+
+def apply_update(row: ModelT, fields: dict) -> ModelT:
+    """Apply a patch-style payload; an empty payload is a 400."""
+    if not fields:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided to update",
+        )
+    for name, value in fields.items():
+        setattr(row, name, value)
+    return row
+
+
+# -----------------------------------------------------------------------------

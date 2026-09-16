@@ -1,10 +1,9 @@
-
-DROP TABLE IF EXISTS public.login_session;
+-- ---------------------------------------------------------------------------
 
 CREATE TABLE public.login_session (
     id                 bigint      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     session_token_hash bytea       NOT NULL,
-    user_id            integer     NOT NULL
+    user_id            bigint      NOT NULL
                                    REFERENCES public.application_user(id) ON DELETE CASCADE,
     workstation        text,
     ip_address         inet,
@@ -20,12 +19,16 @@ CREATE TABLE public.login_session (
     CONSTRAINT login_session_data_object  CHECK (jsonb_typeof(data) = 'object')
 );
 
+-- ---------------------------------------------------------------------------
+
 CREATE INDEX login_session_user_id_idx    ON public.login_session (user_id);
 CREATE INDEX login_session_expires_at_idx ON public.login_session (expires_at);
+
+-- ---------------------------------------------------------------------------
 
 CREATE VIEW public.login_session_active AS
     SELECT * FROM public.login_session
     WHERE revoked_at IS NULL
       AND expires_at > now();
 
-
+-- ---------------------------------------------------------------------------

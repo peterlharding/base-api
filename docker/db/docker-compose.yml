@@ -1,5 +1,10 @@
 
-# Use postgres/example user/password credentials
+# Dev Postgres for base-api.
+#
+# The published port and the superuser password are interpolated from the
+# repo-root .env, which is the single place they are chosen (the test stack
+# in docker/test/ reads TEST_DB_PORT from the same file).  Both Makefiles
+# pass it explicitly:  docker compose --env-file <root>/.env ...
 
 services:
 
@@ -16,9 +21,9 @@ services:
     #    tmpfs:
     #      size: 134217728 # 128*2^20 bytes = 128Mb
     environment:
-      POSTGRES_PASSWORD: Very-secreT
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in the repo-root .env}
     ports:
-      - 127.0.0.1:5432:5432
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
 
   #adminer:
   #  image: adminer
