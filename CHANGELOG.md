@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.7.0] - 2026-09-16
+
+### Added
+
+- Migration `0004` adds 25 foreign keys across the CRM tables, all
+  `ON DELETE SET NULL`, so deleting a parent orphans its children rather
+  than destroying them.
+  They are `DEFERRABLE INITIALLY IMMEDIATE`: `application_user.user_role_id`
+  and `user_role.forecast_user_id` reference each other, so no insertion
+  order satisfies both while constraints are checked per statement.
+  `scripts/seed.py` issues `SET CONSTRAINTS ALL DEFERRED` for its load;
+  ordinary requests still fail on the offending statement.
+- `tests/test_foreign_keys.py` covers rejection of dangling references, the
+  `SET NULL` behaviour on delete, and the columns that remain unconstrained.
+
+### Changed
+
+- The migration reconciles before it constrains: any reference that does not
+  resolve is set to NULL first, so an existing database upgrades in place.
+  Without it the migration succeeded on an empty database and failed on a
+  populated one.
+- `db/schema/data/application_user.sql` used `0` as a "none" sentinel for
+  `delegated_approver_id`.
+  Identity values start at 1, so `0` can never resolve; it is now NULL.
+
+### Fixed
+
+- A reference to a non-existent row is now rejected with 400 rather than
+  silently stored.
+
 ## [0.6.0] - 2026-09-16
 
 A CRM schema lands on top of the API scaffold, and the migration history is
