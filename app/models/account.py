@@ -10,7 +10,7 @@ import uuid
 
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Identity, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Identity, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -33,8 +33,7 @@ class Account(Base):
     notes:                Mapped[str | None]       = mapped_column(Text)
 
     record_type_ref:      Mapped[uuid.UUID | None] = mapped_column(Uuid)
-    parent_id:            Mapped[int | None]       = mapped_column(BigInteger)
-
+    parent_id:            Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("account.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     billing_street:       Mapped[str | None]       = mapped_column(Text)
     billing_city:         Mapped[str | None]       = mapped_column(String(32))
     billing_state:        Mapped[str | None]       = mapped_column(String(20))
@@ -61,8 +60,7 @@ class Account(Base):
     rating:               Mapped[str | None]       = mapped_column(String(18))
     site:                 Mapped[str | None]       = mapped_column(Text)
 
-    owner_id:             Mapped[int | None]       = mapped_column(BigInteger)
-
+    owner_id:             Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     is_deleted:           Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
 
     last_activity_date:   Mapped[date | None]      = mapped_column(Date)

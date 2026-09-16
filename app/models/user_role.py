@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Identity, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Identity, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -25,15 +25,14 @@ class UserRole(Base):
     guid:                                 Mapped[uuid.UUID | None] = mapped_column(Uuid)
     name:                                 Mapped[str | None]       = mapped_column(String(64))
 
-    parent_role_id:                       Mapped[int | None]       = mapped_column(BigInteger)
+    parent_role_id:                       Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("user_role.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     rollup_description:                   Mapped[str | None]       = mapped_column(Text)
 
     opportunity_access_for_account_owner: Mapped[str | None]       = mapped_column(String(20), server_default=text("'Edit'"))
     case_access_for_account_owner:        Mapped[str | None]       = mapped_column(String(20), server_default=text("'Edit'"))
     contact_access_for_account_owner:     Mapped[str | None]       = mapped_column(String(20), server_default=text("'Edit'"))
 
-    forecast_user_id:                     Mapped[int | None]       = mapped_column(BigInteger)
-
+    forecast_user_id:                     Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     portal_account_ref:                   Mapped[str | None]       = mapped_column(String(18))
     portal_type:                          Mapped[str | None]       = mapped_column(String(20))
 

@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Identity, Integer, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Integer, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -35,7 +35,7 @@ class Document(Base):
     body_length:            Mapped[int | None]       = mapped_column(Integer, server_default=text("0"))
     body_length_compressed: Mapped[int | None]       = mapped_column(Integer, server_default=text("0"))
 
-    author_id:              Mapped[int | None]       = mapped_column(BigInteger)
+    author_id:              Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     author_details:         Mapped[str | None]       = mapped_column(Text)
 
     folder_ref:             Mapped[uuid.UUID | None] = mapped_column(Uuid)

@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Identity, Integer, String, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Integer, String, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -33,8 +33,7 @@ class Attachment(Base):
     body_length_compressed: Mapped[int | None]       = mapped_column(Integer, server_default=text("0"))
 
     parent_id:              Mapped[int | None]       = mapped_column(BigInteger)
-    owner_id:               Mapped[int | None]       = mapped_column(BigInteger)
-
+    owner_id:               Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     is_deleted:             Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     is_private:             Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
 

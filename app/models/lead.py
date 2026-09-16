@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Identity, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -52,8 +52,7 @@ class Lead(Base):
     annual_revenue:           Mapped[str | None]       = mapped_column(String(32))
     number_of_employees:      Mapped[str | None]       = mapped_column(String(32))
 
-    owner_id:                 Mapped[int | None]       = mapped_column(BigInteger)
-
+    owner_id:                 Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     do_not_call:              Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     has_opted_out_of_fax:     Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     has_opted_out_of_email:   Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
@@ -62,10 +61,9 @@ class Lead(Base):
 
     is_converted:             Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     converted_date:           Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
-    converted_account_id:     Mapped[int | None]       = mapped_column(BigInteger)
-    converted_contact_id:     Mapped[int | None]       = mapped_column(BigInteger)
-    converted_opportunity_id: Mapped[int | None]       = mapped_column(BigInteger)
-
+    converted_account_id:     Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("account.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
+    converted_contact_id:     Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("contact.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
+    converted_opportunity_id: Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("opportunity.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     activity_date:            Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
     transfer_date:            Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
 

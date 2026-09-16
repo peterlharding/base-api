@@ -9,7 +9,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Date, DateTime, Identity, Numeric, String, Text, func, text
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Identity, Numeric, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -26,12 +26,11 @@ class Quote(Base):
     quote_amount:   Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
 
     quoter:         Mapped[str]            = mapped_column(String(64))
-    quoter_id:      Mapped[int | None]     = mapped_column(BigInteger)
-
-    account_id:     Mapped[int | None]     = mapped_column(BigInteger)
+    quoter_id:      Mapped[int | None]     = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
+    account_id:     Mapped[int | None]     = mapped_column(BigInteger, ForeignKey("account.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     company:        Mapped[str | None]     = mapped_column(String(80))
 
-    contact_id:     Mapped[int | None]     = mapped_column(BigInteger)
+    contact_id:     Mapped[int | None]     = mapped_column(BigInteger, ForeignKey("contact.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     contact:        Mapped[str | None]     = mapped_column(String(32))
 
     comment:        Mapped[str | None]     = mapped_column(Text, server_default=text("''"))

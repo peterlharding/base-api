@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Identity, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -33,8 +33,7 @@ class Note(Base):
     is_deleted:     Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     is_private:     Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
 
-    owner_id:       Mapped[int | None]       = mapped_column(BigInteger)
-
+    owner_id:       Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     updated_at:    Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_by_id: Mapped[int | None]       = mapped_column(BigInteger)
     created_at:     Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())

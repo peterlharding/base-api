@@ -12,7 +12,7 @@ diff, and so a create returns the database's own values untouched.
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Uuid, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sqlalchemy.ext.hybrid import (
@@ -67,8 +67,7 @@ class ApplicationUser(Base):
         Boolean, server_default=text("true")
     )
 
-    user_role_id:                 Mapped[int | None]  = mapped_column(BigInteger)
-
+    user_role_id:                 Mapped[int | None]  = mapped_column(BigInteger, ForeignKey("user_role.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     user_type:                    Mapped[str | None]  = mapped_column(
         String(20), server_default=text("'Standard'")
     )
@@ -100,8 +99,7 @@ class ApplicationUser(Base):
     )
 
     employee_number:              Mapped[str | None]  = mapped_column(String(50))
-    delegated_approver_id:        Mapped[int | None]  = mapped_column(BigInteger)
-
+    delegated_approver_id:        Mapped[int | None]  = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     start_day:                    Mapped[int | None]  = mapped_column(
         Integer, server_default=text("6")
     )

@@ -10,7 +10,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Identity, Integer, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Integer, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -43,9 +43,8 @@ class Task(Base):
     is_deleted:               Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
     is_archived:              Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))
 
-    owner_id:                 Mapped[int | None]       = mapped_column(BigInteger)
-    account_id:               Mapped[int | None]       = mapped_column(BigInteger)
-
+    owner_id:                 Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
+    account_id:               Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("account.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     activity_date:            Mapped[datetime]         = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     call_duration_in_seconds: Mapped[int | None]       = mapped_column(Integer, server_default=text("0"))

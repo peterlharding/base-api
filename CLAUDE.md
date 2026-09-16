@@ -116,6 +116,10 @@ So `db/schema/create/*.sql` is migration payload, not reference material.
 `db/schema/sql/` is the exception, and the reason it is a sibling of `create/` rather than part of it: `db/schema/sql/01-create-users.sql` and `db/schema/sql/02-create-database.sql` create the roles and the database itself, are run by `make setup`, and are never touched by a migration.
 Two consequences: those scripts must not contain `DROP TABLE` (a re-run would destroy data), and a schema edit means editing the `.sql` file plus adding a migration that applies the change to existing databases.
 
+That second rule does **not** hold for constraints.
+Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so a constraint written into a create script *and* added by a later migration is applied twice on a fresh build, and the migration fails.
+Constraints therefore live only in the migration that introduces them, which is why `0004` adds 25 foreign keys that `db/schema/create/*.sql` does not mention.
+
 The chain is three migrations, each executing a group of scripts:
 
 | revision | installs |
@@ -187,7 +191,15 @@ A `POST` carrying a misspelled field therefore returns 201 with it discarded, an
 
 `event.account_id` and `event.owner_id` are **varchar(18)** on that table, not bigint as the same column names are everywhere else, and the schema types them as strings to match.
 
-The CRM tables declare **no foreign keys**, so `account_id`, `owner_id`, `reports_to_id` and `parent_id` accept any bigint and nothing validates that the target row exists.
+Migration `0004` adds 25 foreign keys across the CRM tables, all `ON DELETE SET NULL`: deleting a user orphans what they owned rather than destroying it.
+They are `DEFERRABLE INITIALLY IMMEDIATE`, because `application_user.user_role_id` and `user_role.forecast_user_id` reference each other and no insertion order satisfies both under per-statement checking.
+Ordinary requests still fail on the offending statement; `scripts/seed.py` issues `SET CONSTRAINTS ALL DEFERRED` inside its transaction.
+
+Reference columns that are **not** constrained are unconstrained deliberately, and accept any bigint:
+polymorphic ones paired with a discriminator (`access.reference_id`, `note.parent_id`, `task.who_id`, `task.what_id`, `attachment.parent_id`), ones of the wrong type (`event.account_id` and `event.owner_id` are varchar on that table), and ones with no target table (`application_user.profile_id`, and the opaque `*_ref` columns).
+
+None of the 25 child columns carries an index.
+Postgres does not create one for a foreign key, so a parent delete scans each child table; worth adding if these grow.
 
 ## Testing
 

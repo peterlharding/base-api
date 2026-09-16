@@ -12,7 +12,7 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Identity, String, Text, Uuid, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -37,9 +37,8 @@ class Opportunity(Base):
     type:                       Mapped[str | None]       = mapped_column(String(64))
     next_step:                  Mapped[str | None]       = mapped_column(String(32))
 
-    account_id:                 Mapped[int | None]       = mapped_column(BigInteger)
-    owner_id:                   Mapped[int | None]       = mapped_column(BigInteger)
-
+    account_id:                 Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("account.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
+    owner_id:                   Mapped[int | None]       = mapped_column(BigInteger, ForeignKey("application_user.id", ondelete="SET NULL", deferrable=True, initially="IMMEDIATE"))
     lead_source:                Mapped[str | None]       = mapped_column(Text)
 
     is_private:                 Mapped[bool | None]      = mapped_column(Boolean, server_default=text("false"))

@@ -73,7 +73,7 @@ INSERT INTO public.application_user (
     '37',
     '000000000000000AAA',
     '0',
-    0,
+    NULL,
     '2008-03-24 08:54:00'::timestamptz,
     1,
     2
@@ -112,7 +112,7 @@ INSERT INTO public.application_user (
     '37',
     '000000000000000AAA',
     '0',
-    0,
+    NULL,
     '2008-03-24 08:54:00'::timestamptz,
     1,
     2

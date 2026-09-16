@@ -61,18 +61,34 @@ def test_conversion_fields_are_not_cross_validated(client) -> None:
 # -----------------------------------------------------------------------------
 
 def test_conversion_ids_round_trip(client) -> None:
+    """The converted_* columns carry foreign keys, so the targets must exist."""
+    account = client.post("/api/v1/accounts", json={"name": "Acme"}).json()
+    contact = client.post("/api/v1/contacts", json={"last_name": "Nguyen"}).json()
+    opp = client.post("/api/v1/opportunities", json={"name": "Acme renewal"}).json()
+
     r = client.post("/api/v1/leads", json={
         "last_name": "Nguyen",
         "is_converted": True,
-        "converted_account_id": 1,
-        "converted_contact_id": 2,
-        "converted_opportunity_id": 3,
+        "converted_account_id": account["id"],
+        "converted_contact_id": contact["id"],
+        "converted_opportunity_id": opp["id"],
     })
     assert r.status_code == 201
     body = r.json()
-    assert body["converted_account_id"] == 1
-    assert body["converted_contact_id"] == 2
-    assert body["converted_opportunity_id"] == 3
+    assert body["converted_account_id"] == account["id"]
+    assert body["converted_contact_id"] == contact["id"]
+    assert body["converted_opportunity_id"] == opp["id"]
+
+
+# -----------------------------------------------------------------------------
+
+def test_conversion_ids_must_exist(client) -> None:
+    """A dangling reference is now rejected rather than silently stored."""
+    r = client.post(
+        "/api/v1/leads", json={"last_name": "Nguyen", "converted_account_id": 999}
+    )
+    assert r.status_code == 400
+    assert "constraint" in r.json()["detail"]
 
 
 # -----------------------------------------------------------------------------

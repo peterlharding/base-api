@@ -97,6 +97,11 @@ def main() -> int:
             print("re-run with --reset to truncate them first.", file=sys.stderr)
             return 1
 
+        # application_user and user_role reference each other, so no ordering
+        # of the files satisfies every constraint statement by statement.  The
+        # foreign keys are DEFERRABLE, so defer them to COMMIT for this load.
+        session.execute(text("SET CONSTRAINTS ALL DEFERRED"))
+
         if args.reset:
             targets = ", ".join(f'"{name}"' for name in ORDER)
             session.execute(text(f"TRUNCATE {targets} RESTART IDENTITY CASCADE"))
