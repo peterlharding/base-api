@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.11.1] - 2026-09-17
+
+### Added
+
+- `tests/test_migrations.py` - 15 tests that exercise migrations **against
+  data**, closing the gap that let migration `0004` clear valid
+  self-referencing values while 222 tests stayed green.
+  They plant rows at one revision, upgrade, and assert what survived.
+- `tests/migration_fixtures.py`.
+  These tests run against a scratch database created and dropped per session,
+  because they move the schema version around and the rest of the suite
+  shares one database at head.
+
+### Changed
+
+- `db/alembic/env.py` honours a `sqlalchemy.url` the caller has already
+  pinned, falling back to application settings as before.
+  Without it, alembic rebuilt the URL and pointed the migration tests back at
+  the shared test database.
+
 ## [0.11.0] - 2026-09-17
 
 ### Added
