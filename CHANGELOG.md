@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.14.0] - 2026-09-18
+
+### Added
+
+- A retention policy, applied by `scripts/prune.py` (`make prune`,
+  `make prune-dry-run`).
+  Nothing runs it on a schedule.
+
+  | table | pruned by | default |
+  |---|---|---|
+  | `token_blacklist` | expiry | always |
+  | `login_session` | age, once the session has ended | 90 days |
+  | `audit_log` | age | **kept indefinitely** |
+
+- `LOGIN_SESSION_RETENTION_DAYS` and `AUDIT_LOG_RETENTION_DAYS` settings.
+  `0` means keep indefinitely, which is the audit trail's default: one that
+  deletes itself on a timer is a weaker guarantee than one that does not.
+- `tests/test_retention.py` - 9 tests.
+- `doc/TESTING.md` gains a prerequisites section covering the Docker Compose
+  plugin version, which is packaged separately from the CLI on Debian and
+  Ubuntu and can lag far enough behind to be refused by a current daemon.
+
+### Changed
+
+- **`requires-python` is now `>=3.12`**, down from `>=3.14`, matching the
+  deployment target.
+  Verified on a real 3.12 interpreter, not inferred: the full suite passes
+  there and on 3.14.
+- `scripts/prune.py` replaces `scripts/prune_blacklist.py` and handles all
+  three tables.
+  `make prune-blacklist` still works, delegating with `--only`.
+
 ## [0.13.0] - 2026-09-18
 
 **Breaking: `audit_log` is reshaped, and `POST /api/v1/audit-log` is removed.**
