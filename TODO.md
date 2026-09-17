@@ -1,14 +1,23 @@
 # TODO
 
 Outstanding work on base-api, roughly in the order it is worth doing.
+
+## 1. Retention
+
+Three tables grow without bound and nothing prunes them:
+
+- `audit_log` - one row per mutation, by design.  How long is a
+  retention decision, not a cleanup one.
+- `login_session` - one row per sign-in, never deleted.
+- `token_blacklist` - pruned on logout and by `make prune-blacklist`,
+  but nothing runs the latter on a schedule.
+
+## 2. No revoke-all
+
+Signing out one device leaves the others signed in, so there is no way
+to respond to a compromised account in one action.
+
 Current release: v0.7.1.
-
-## 1. The API does not write audit_log itself
-
-`login_session` is now recorded server-side on every sign-in, and the
-front end can `POST` its own activity to `/api/v1/audit-log`.
-What is missing is the API recording its own mutations - a create, update or
-delete through any CRUD route leaves no trace.
 
 ---
 

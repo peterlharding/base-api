@@ -60,7 +60,7 @@ def list_documents(
 def create_document(payload: schemas.DocumentCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Document:
     document = Document(**payload.model_dump(exclude_unset=True))
     db.add(document)
-    commit(db, Document, _LABEL, actor.id)
+    commit(db, Document, _LABEL, actor.id, str(actor.guid))
     db.refresh(document)
     return document
 
@@ -92,7 +92,7 @@ def update_document(
     """Patch a document: only the fields present in the payload are changed."""
     document = get_or_404(db, Document, document_pk, _LABEL)
     apply_update(document, payload.model_dump(exclude_unset=True))
-    commit(db, Document, _LABEL, actor.id)
+    commit(db, Document, _LABEL, actor.id, str(actor.guid))
     db.refresh(document)
     return document
 
@@ -106,7 +106,7 @@ def update_document(
 def delete_document(document_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     document = get_or_404(db, Document, document_pk, _LABEL)
     db.delete(document)
-    commit(db, Document, _LABEL, actor.id)
+    commit(db, Document, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

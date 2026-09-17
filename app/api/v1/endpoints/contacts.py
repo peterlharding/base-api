@@ -60,7 +60,7 @@ def list_contacts(
 def create_contact(payload: schemas.ContactCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Contact:
     contact = Contact(**payload.model_dump(exclude_unset=True))
     db.add(contact)
-    commit(db, Contact, _LABEL, actor.id)
+    commit(db, Contact, _LABEL, actor.id, str(actor.guid))
     db.refresh(contact)
     return contact
 
@@ -92,7 +92,7 @@ def update_contact(
     """Patch a contact: only the fields present in the payload are changed."""
     contact = get_or_404(db, Contact, contact_pk, _LABEL)
     apply_update(contact, payload.model_dump(exclude_unset=True))
-    commit(db, Contact, _LABEL, actor.id)
+    commit(db, Contact, _LABEL, actor.id, str(actor.guid))
     db.refresh(contact)
     return contact
 
@@ -106,7 +106,7 @@ def update_contact(
 def delete_contact(contact_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     contact = get_or_404(db, Contact, contact_pk, _LABEL)
     db.delete(contact)
-    commit(db, Contact, _LABEL, actor.id)
+    commit(db, Contact, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

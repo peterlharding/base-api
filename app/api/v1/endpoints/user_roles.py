@@ -67,7 +67,7 @@ def create_user_role(
 ) -> UserRole:
     row = UserRole(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, UserRole, _LABEL, actor.id)
+    commit(db, UserRole, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -99,7 +99,7 @@ def update_user_role(
     """Patch a user role: only the fields present in the payload are changed."""
     row = get_or_404(db, UserRole, user_role_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, UserRole, _LABEL, actor.id)
+    commit(db, UserRole, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -113,7 +113,7 @@ def update_user_role(
 def delete_user_role(user_role_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, UserRole, user_role_pk, _LABEL)
     db.delete(row)
-    commit(db, UserRole, _LABEL, actor.id)
+    commit(db, UserRole, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

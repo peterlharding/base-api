@@ -61,7 +61,7 @@ def list_events(
 def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Event:
     event = Event(**payload.model_dump(exclude_unset=True))
     db.add(event)
-    commit(db, Event, _LABEL, actor.id)
+    commit(db, Event, _LABEL, actor.id, str(actor.guid))
     db.refresh(event)
     return event
 
@@ -93,7 +93,7 @@ def update_event(
     """Patch a event: only the fields present in the payload are changed."""
     event = get_or_404(db, Event, event_pk, _LABEL)
     apply_update(event, payload.model_dump(exclude_unset=True))
-    commit(db, Event, _LABEL, actor.id)
+    commit(db, Event, _LABEL, actor.id, str(actor.guid))
     db.refresh(event)
     return event
 
@@ -107,7 +107,7 @@ def update_event(
 def delete_event(event_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     event = get_or_404(db, Event, event_pk, _LABEL)
     db.delete(event)
-    commit(db, Event, _LABEL, actor.id)
+    commit(db, Event, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

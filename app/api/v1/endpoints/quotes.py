@@ -60,7 +60,7 @@ def list_quotes(
 def create_quote(payload: schemas.QuoteCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Quote:
     row = Quote(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Quote, _LABEL, actor.id)
+    commit(db, Quote, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -92,7 +92,7 @@ def update_quote(
     """Patch a quote: only the fields present in the payload are changed."""
     row = get_or_404(db, Quote, quote_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Quote, _LABEL, actor.id)
+    commit(db, Quote, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -106,7 +106,7 @@ def update_quote(
 def delete_quote(quote_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Quote, quote_pk, _LABEL)
     db.delete(row)
-    commit(db, Quote, _LABEL, actor.id)
+    commit(db, Quote, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

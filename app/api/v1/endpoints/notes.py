@@ -60,7 +60,7 @@ def list_notes(
 def create_note(payload: schemas.NoteCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Note:
     note = Note(**payload.model_dump(exclude_unset=True))
     db.add(note)
-    commit(db, Note, _LABEL, actor.id)
+    commit(db, Note, _LABEL, actor.id, str(actor.guid))
     db.refresh(note)
     return note
 
@@ -92,7 +92,7 @@ def update_note(
     """Patch a note: only the fields present in the payload are changed."""
     note = get_or_404(db, Note, note_pk, _LABEL)
     apply_update(note, payload.model_dump(exclude_unset=True))
-    commit(db, Note, _LABEL, actor.id)
+    commit(db, Note, _LABEL, actor.id, str(actor.guid))
     db.refresh(note)
     return note
 
@@ -106,7 +106,7 @@ def update_note(
 def delete_note(note_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     note = get_or_404(db, Note, note_pk, _LABEL)
     db.delete(note)
-    commit(db, Note, _LABEL, actor.id)
+    commit(db, Note, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

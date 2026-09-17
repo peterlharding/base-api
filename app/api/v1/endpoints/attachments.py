@@ -59,7 +59,7 @@ def list_attachments(
 def create_attachment(payload: schemas.AttachmentCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Attachment:
     row = Attachment(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Attachment, _LABEL, actor.id)
+    commit(db, Attachment, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -91,7 +91,7 @@ def update_attachment(
     """Patch a attachment: only the fields present in the payload are changed."""
     row = get_or_404(db, Attachment, attachment_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Attachment, _LABEL, actor.id)
+    commit(db, Attachment, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -105,7 +105,7 @@ def update_attachment(
 def delete_attachment(attachment_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Attachment, attachment_pk, _LABEL)
     db.delete(row)
-    commit(db, Attachment, _LABEL, actor.id)
+    commit(db, Attachment, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

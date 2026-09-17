@@ -82,7 +82,94 @@ def _stamp(db: Session, actor_id: int | None) -> None:
 
 # -----------------------------------------------------------------------------
 
-def commit(db: Session, model: type[ModelT], label: str, actor_id: int | None) -> None:
+def _describe(obj, changed: list[str] | None) -> str:
+    """A short summary of what a write did.
+
+    For an update, the columns that actually changed - which is the question
+    someone reading the log will have.  Values are deliberately not recorded:
+    an audit table holding old and new values of every column becomes a second
+    copy of the database, including the parts nobody wanted duplicated.
+    """
+    if changed:
+        return "changed: " + ", ".join(sorted(changed))
+    return ""
+
+
+# -----------------------------------------------------------------------------
+
+def _audit(db: Session, actor_guid: str | None) -> list:
+    """Build audit entries for whatever this session is about to write.
+
+    Read from the session rather than passed in by each endpoint, for the same
+    reason the stamps are: a route that forgets to call it is silently
+    unaudited, and nothing says so.
+
+    Recording what the session actually changed, rather than the HTTP method,
+    means a PUT that alters nothing produces no entry - the log describes the
+    data, not the request.
+
+    Must run before the flush: SQLAlchemy discards attribute history once the
+    change is written, so the changed-column names are only available now.
+    Row ids for inserts are only available after, which is why this returns
+    thunks rather than finished rows.
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    from app.core.config import get_settings
+    from app.models import AuditLog
+
+    if actor_guid is None:
+        return []
+
+    application = get_settings().app_name
+    pending = []
+
+    def _plan(obj, action, changed=None):
+        if isinstance(obj, AuditLog):
+            return                              # do not audit the audit trail
+        pending.append((obj, action, _describe(obj, changed)))
+
+    for obj in db.new:
+        _plan(obj, "create")
+
+    for obj in db.dirty:
+        if not db.is_modified(obj):
+            continue                            # touched but unchanged
+        changed = [
+            name for name, attr in sa_inspect(obj).attrs.items()
+            if attr.history.has_changes()
+        ]
+        _plan(obj, "update", changed)
+
+    for obj in db.deleted:
+        _plan(obj, "delete")
+
+    def _build() -> list:
+        # after the flush, so an inserted row knows its id
+        return [
+            AuditLog(
+                application=application,
+                action=action,
+                reference_type=obj.__tablename__,
+                reference_id=getattr(obj, "id", None),
+                description=description,
+                user_id=actor_guid,
+            )
+            for obj, action, description in pending
+        ]
+
+    return [_build] if pending else []
+
+
+# -----------------------------------------------------------------------------
+
+def commit(
+    db: Session,
+    model: type[ModelT],
+    label: str,
+    actor_id: int | None,
+    actor_guid: str | None = None,
+) -> None:
     """Commit, turning constraint violations into 4xx instead of a 500.
 
     The session is rolled back first: after an IntegrityError the transaction
@@ -91,10 +178,19 @@ def commit(db: Session, model: type[ModelT], label: str, actor_id: int | None) -
     ``actor_id`` is required rather than defaulted, so a new endpoint that
     forgets it fails loudly at import rather than silently writing rows with
     no provenance.  Pass None only where there genuinely is no actor.
+
+    ``actor_guid`` is what audit_log records.  Without it the write still
+    happens and is still stamped, but leaves no audit entry - so it is
+    defaulted rather than required, and endpoints pass ``actor.guid``.
     """
     _stamp(db, actor_id)
+    deferred = _audit(db, actor_guid)
 
     try:
+        if deferred:
+            db.flush()                          # assigns ids to inserted rows
+            for build in deferred:
+                db.add_all(build())
         db.commit()
     except IntegrityError as exc:
         db.rollback()

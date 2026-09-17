@@ -192,9 +192,24 @@ Without the second check a revoked token could be exchanged for a fresh one and 
   decline to, or report someone else's.
   Only a SHA-256 of the token is stored, and the endpoint never returns even
   that.
-* **`audit-log`** is append-only: `GET` and `POST`, no `PUT` or `DELETE`.
-  An audit trail the recorded parties can edit is not one.
-  `user_id` comes from the bearer token, never the payload.
+* **`audit-log`** is read-only over HTTP.
+  The API writes it itself, in `crud.commit()` - the same place the audit
+  stamps are applied, and the only point every mutation passes through, so a
+  route cannot be silently unaudited.
+  An entry a client can compose is one it can fabricate or omit.
+
+  It records what the **session** changed rather than the HTTP method, so a
+  `PUT` that alters nothing produces no entry and `action` is
+  `create`/`update`/`delete`.
+  `reference_type` is the table name, taken from `__tablename__`, so nothing
+  has to be mapped or maintained.
+  An update's `description` lists the columns that changed, not their values:
+  an audit table holding before and after for every column becomes a second
+  copy of the database.
+
+  Mutations only - reads would drown everything else on a CRM.
+  `action` is free text rather than a constrained set, so `login` or `export`
+  can be added later without a migration.
 * **`instance-metadata`** is a singleton: one object, no path parameter, no
   writes.
   `release`, `db_version` and `notes` come from the row; `app_version` and

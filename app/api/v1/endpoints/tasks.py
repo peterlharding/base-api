@@ -61,7 +61,7 @@ def list_tasks(
 def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Task:
     task = Task(**payload.model_dump(exclude_unset=True))
     db.add(task)
-    commit(db, Task, _LABEL, actor.id)
+    commit(db, Task, _LABEL, actor.id, str(actor.guid))
     db.refresh(task)
     return task
 
@@ -93,7 +93,7 @@ def update_task(
     """Patch a task: only the fields present in the payload are changed."""
     task = get_or_404(db, Task, task_pk, _LABEL)
     apply_update(task, payload.model_dump(exclude_unset=True))
-    commit(db, Task, _LABEL, actor.id)
+    commit(db, Task, _LABEL, actor.id, str(actor.guid))
     db.refresh(task)
     return task
 
@@ -107,7 +107,7 @@ def update_task(
 def delete_task(task_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     task = get_or_404(db, Task, task_pk, _LABEL)
     db.delete(task)
-    commit(db, Task, _LABEL, actor.id)
+    commit(db, Task, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

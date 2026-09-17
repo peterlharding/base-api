@@ -922,35 +922,18 @@ class LoginSession(BaseModel):
 # -----------------------------------------------------------------------------
 # AuditLog
 #
-# Append-only: create and read, never update or delete.  user_id is absent
-# from the create schema because it is taken from the bearer token - a client
-# does not get to say who did something.
+# Read-only: the API writes these rows itself in app/api/v1/crud.py, so there
+# is no Create schema.
 
-
-class AuditLogCreate(BaseModel):
-    """Payload for POST /audit-log."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    application: str
-    reference_type: int
-    reference_id: int
-    event: str
-    description: str
-    reference: str | None = None
-
-
-# -----------------------------------------------------------------------------
 
 class AuditLog(BaseModel):
     """An audit entry as returned by the API."""
 
     id: int
     application: str
-    reference_type: int
-    reference_id: int
-    reference: str | None = None
-    event: str
+    action: str
+    reference_type: str
+    reference_id: int | None = None
     description: str
     user_id: str
     created_at: datetime | None = None

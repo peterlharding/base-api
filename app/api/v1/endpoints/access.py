@@ -63,7 +63,7 @@ def list_access_rows(
 def create_access(payload: schemas.AccessCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Access:
     row = Access(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Access, _LABEL, actor.id)
+    commit(db, Access, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -95,7 +95,7 @@ def update_access(
     """Patch a access: only the fields present in the payload are changed."""
     row = get_or_404(db, Access, access_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Access, _LABEL, actor.id)
+    commit(db, Access, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -109,7 +109,7 @@ def update_access(
 def delete_access(access_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Access, access_pk, _LABEL)
     db.delete(row)
-    commit(db, Access, _LABEL, actor.id)
+    commit(db, Access, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

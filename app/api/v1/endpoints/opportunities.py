@@ -61,7 +61,7 @@ def list_opportunities(
 def create_opportunity(payload: schemas.OpportunityCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Opportunity:
     row = Opportunity(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Opportunity, _LABEL, actor.id)
+    commit(db, Opportunity, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -93,7 +93,7 @@ def update_opportunity(
     """Patch a opportunity: only the fields present in the payload are changed."""
     row = get_or_404(db, Opportunity, opportunity_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Opportunity, _LABEL, actor.id)
+    commit(db, Opportunity, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -107,7 +107,7 @@ def update_opportunity(
 def delete_opportunity(opportunity_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Opportunity, opportunity_pk, _LABEL)
     db.delete(row)
-    commit(db, Opportunity, _LABEL, actor.id)
+    commit(db, Opportunity, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

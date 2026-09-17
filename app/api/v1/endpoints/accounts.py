@@ -60,7 +60,7 @@ def list_accounts(
 def create_account(payload: schemas.AccountCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Account:
     account = Account(**payload.model_dump(exclude_unset=True))
     db.add(account)
-    commit(db, Account, _LABEL, actor.id)
+    commit(db, Account, _LABEL, actor.id, str(actor.guid))
     db.refresh(account)
     return account
 
@@ -92,7 +92,7 @@ def update_account(
     """Patch an account: only the fields present in the payload are changed."""
     account = get_or_404(db, Account, account_pk, _LABEL)
     apply_update(account, payload.model_dump(exclude_unset=True))
-    commit(db, Account, _LABEL, actor.id)
+    commit(db, Account, _LABEL, actor.id, str(actor.guid))
     db.refresh(account)
     return account
 
@@ -106,7 +106,7 @@ def update_account(
 def delete_account(account_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     account = get_or_404(db, Account, account_pk, _LABEL)
     db.delete(account)
-    commit(db, Account, _LABEL, actor.id)
+    commit(db, Account, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

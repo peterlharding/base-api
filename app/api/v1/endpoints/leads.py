@@ -60,7 +60,7 @@ def list_leads(
 def create_lead(payload: schemas.LeadCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Lead:
     row = Lead(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Lead, _LABEL, actor.id)
+    commit(db, Lead, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -92,7 +92,7 @@ def update_lead(
     """Patch a lead: only the fields present in the payload are changed."""
     row = get_or_404(db, Lead, lead_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Lead, _LABEL, actor.id)
+    commit(db, Lead, _LABEL, actor.id, str(actor.guid))
     db.refresh(row)
     return row
 
@@ -106,7 +106,7 @@ def update_lead(
 def delete_lead(lead_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Lead, lead_pk, _LABEL)
     db.delete(row)
-    commit(db, Lead, _LABEL, actor.id)
+    commit(db, Lead, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------

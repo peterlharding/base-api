@@ -62,7 +62,7 @@ def list_users(
 def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> ApplicationUser:
     user = ApplicationUser(**payload.model_dump(exclude_unset=True))
     db.add(user)
-    commit(db, ApplicationUser, _LABEL, actor.id)
+    commit(db, ApplicationUser, _LABEL, actor.id, str(actor.guid))
     db.refresh(user)
     return user
 
@@ -90,7 +90,7 @@ def update_user(
     """Patch a user: only the fields present in the payload are changed."""
     user = get_or_404(db, ApplicationUser, user_pk, _LABEL)
     apply_update(user, payload.model_dump(exclude_unset=True))
-    commit(db, ApplicationUser, _LABEL, actor.id)
+    commit(db, ApplicationUser, _LABEL, actor.id, str(actor.guid))
     db.refresh(user)
     return user
 
@@ -102,7 +102,7 @@ def update_user(
 def delete_user(user_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     user = get_or_404(db, ApplicationUser, user_pk, _LABEL)
     db.delete(user)
-    commit(db, ApplicationUser, _LABEL, actor.id)
+    commit(db, ApplicationUser, _LABEL, actor.id, str(actor.guid))
 
 
 # -----------------------------------------------------------------------------
