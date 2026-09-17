@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.14.1] - 2026-09-18
+
+### Fixed
+
+- `make prune ARGS=--dry-run` ran the real prune.
+  Make accepts a variable the recipe never mentions and reports nothing, so
+  the flag was dropped and a request to report became a request to delete.
+  The `seed` and `prune` targets now pass `$(ARGS)` through, so a flag
+  either reaches argparse or fails the target.
+
+### Added
+
+- `tests/test_makefile.py` - holds every script-driven recipe to passing
+  `$(ARGS)` through.
+  A target written without it works perfectly until someone passes a flag,
+  which is too late to find out.
+
 ## [0.14.0] - 2026-09-18
 
 ### Added
