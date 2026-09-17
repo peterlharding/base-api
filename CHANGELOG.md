@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.12.1] - 2026-09-17
+
+### Fixed
+
+- `token_blacklist` grew by one row per logout and never shrank.
+  Rows are now deleted once the token they revoke has expired anyway, at
+  which point the token fails validation on its own.
+
+### Added
+
+- `TokenBlacklist.prune_expired()`, called opportunistically by logout - the
+  only place the table grows, so the only place that can keep it in check
+  without a scheduler.
+- `make prune-blacklist` and `make prune-blacklist-dry-run`, for a deployment
+  where nobody signs out for a long stretch.
+  `scripts/prune_blacklist.py` carries a cron line in its docstring.
+- `tests/test_blacklist_pruning.py` - 6 tests, including one that signs in
+  twice, logs one token out, prunes, and asserts the revoked token is still
+  refused.
+
 ## [0.12.0] - 2026-09-17
 
 ### Added
