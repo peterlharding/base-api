@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Note
+from app.models      import ApplicationUser, Note
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -55,13 +55,12 @@ def list_notes(
 @router.post(
     "",
     response_model=schemas.Note,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_note(payload: schemas.NoteCreate, db: Session = Depends(get_db)) -> Note:
+def create_note(payload: schemas.NoteCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Note:
     note = Note(**payload.model_dump(exclude_unset=True))
     db.add(note)
-    commit(db, Note, _LABEL)
+    commit(db, Note, _LABEL, actor.id)
     db.refresh(note)
     return note
 
@@ -83,17 +82,17 @@ def get_note(note_pk: int, db: Session = Depends(get_db)) -> Note:
 @router.put(
     "/{note_pk}",
     response_model=schemas.Note,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_note(
     note_pk: int,
     payload: schemas.NoteUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Note:
     """Patch a note: only the fields present in the payload are changed."""
     note = get_or_404(db, Note, note_pk, _LABEL)
     apply_update(note, payload.model_dump(exclude_unset=True))
-    commit(db, Note, _LABEL)
+    commit(db, Note, _LABEL, actor.id)
     db.refresh(note)
     return note
 
@@ -102,13 +101,12 @@ def update_note(
 
 @router.delete(
     "/{note_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_note(note_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_note(note_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     note = get_or_404(db, Note, note_pk, _LABEL)
     db.delete(note)
-    commit(db, Note, _LABEL)
+    commit(db, Note, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

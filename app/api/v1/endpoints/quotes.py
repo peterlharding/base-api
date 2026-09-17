@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Quote
+from app.models      import ApplicationUser, Quote
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -55,13 +55,12 @@ def list_quotes(
 @router.post(
     "",
     response_model=schemas.Quote,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_quote(payload: schemas.QuoteCreate, db: Session = Depends(get_db)) -> Quote:
+def create_quote(payload: schemas.QuoteCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Quote:
     row = Quote(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Quote, _LABEL)
+    commit(db, Quote, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -83,17 +82,17 @@ def get_quote(quote_pk: int, db: Session = Depends(get_db)) -> Quote:
 @router.put(
     "/{quote_pk}",
     response_model=schemas.Quote,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_quote(
     quote_pk: int,
     payload: schemas.QuoteUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Quote:
     """Patch a quote: only the fields present in the payload are changed."""
     row = get_or_404(db, Quote, quote_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Quote, _LABEL)
+    commit(db, Quote, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -102,13 +101,12 @@ def update_quote(
 
 @router.delete(
     "/{quote_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_quote(quote_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_quote(quote_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Quote, quote_pk, _LABEL)
     db.delete(row)
-    commit(db, Quote, _LABEL)
+    commit(db, Quote, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

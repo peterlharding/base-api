@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Contact
+from app.models      import ApplicationUser, Contact
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -55,13 +55,12 @@ def list_contacts(
 @router.post(
     "",
     response_model=schemas.Contact,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_contact(payload: schemas.ContactCreate, db: Session = Depends(get_db)) -> Contact:
+def create_contact(payload: schemas.ContactCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Contact:
     contact = Contact(**payload.model_dump(exclude_unset=True))
     db.add(contact)
-    commit(db, Contact, _LABEL)
+    commit(db, Contact, _LABEL, actor.id)
     db.refresh(contact)
     return contact
 
@@ -83,17 +82,17 @@ def get_contact(contact_pk: int, db: Session = Depends(get_db)) -> Contact:
 @router.put(
     "/{contact_pk}",
     response_model=schemas.Contact,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_contact(
     contact_pk: int,
     payload: schemas.ContactUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Contact:
     """Patch a contact: only the fields present in the payload are changed."""
     contact = get_or_404(db, Contact, contact_pk, _LABEL)
     apply_update(contact, payload.model_dump(exclude_unset=True))
-    commit(db, Contact, _LABEL)
+    commit(db, Contact, _LABEL, actor.id)
     db.refresh(contact)
     return contact
 
@@ -102,13 +101,12 @@ def update_contact(
 
 @router.delete(
     "/{contact_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_contact(contact_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_contact(contact_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     contact = get_or_404(db, Contact, contact_pk, _LABEL)
     db.delete(contact)
-    commit(db, Contact, _LABEL)
+    commit(db, Contact, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

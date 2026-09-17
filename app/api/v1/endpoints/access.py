@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Access
+from app.models      import ApplicationUser, Access
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -58,13 +58,12 @@ def list_access_rows(
 @router.post(
     "",
     response_model=schemas.Access,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED,
 )
-def create_access(payload: schemas.AccessCreate, db: Session = Depends(get_db)) -> Access:
+def create_access(payload: schemas.AccessCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Access:
     row = Access(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Access, _LABEL)
+    commit(db, Access, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -86,17 +85,17 @@ def get_access(access_pk: int, db: Session = Depends(get_db)) -> Access:
 @router.put(
     "/{access_pk}",
     response_model=schemas.Access,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_access(
     access_pk: int,
     payload: schemas.AccessUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Access:
     """Patch a access: only the fields present in the payload are changed."""
     row = get_or_404(db, Access, access_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Access, _LABEL)
+    commit(db, Access, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -105,13 +104,12 @@ def update_access(
 
 @router.delete(
     "/{access_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_access(access_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_access(access_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Access, access_pk, _LABEL)
     db.delete(row)
-    commit(db, Access, _LABEL)
+    commit(db, Access, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

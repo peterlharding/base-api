@@ -212,6 +212,14 @@ Server-managed columns are deliberately absent from the write schemas - `hashed_
 * `commit(db, Model, label)` translates constraint violations into 4xx rather than letting them escape as a 500 - unique to **409**, and FK / not-null / check to **400**.
   It rolls back first, because an aborted transaction poisons every later use of the session.
 * `get_or_404(db, Model, pk, label)` and `apply_update(row, fields)`.
+* `commit()` also stamps `created_by_id` and `updated_by_id` from the acting user, on the twelve tables that carry those columns.
+  `actor_id` is a **required** parameter rather than a defaulted one, so a new endpoint that forgets it fails at import rather than silently writing rows with no provenance.
+
+Write routes therefore take `actor: ApplicationUser = Depends(jwt_bearer)` as a value; read routes use `dependencies=[Depends(jwt_bearer)]`.
+The parameter is named `actor`, not `user`: in `users.py` the entity being written is itself a user, and the two shadowed each other - the stamp silently recorded the new row's own id instead of the caller's.
+
+The stamps are readable on the response schemas and absent from the write schemas, so a client cannot claim the work was done by someone else.
+Note that a contextvar set inside a FastAPI dependency does **not** reach the endpoint body, in either sync or async routes, so the actor cannot be passed implicitly.
 
 Only `application_user.email` carries a UNIQUE constraint today, so no other resource can produce a 409 yet; the handling is in place for when they gain one.
 

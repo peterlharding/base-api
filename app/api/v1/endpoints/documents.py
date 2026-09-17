@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Document
+from app.models      import ApplicationUser, Document
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -55,13 +55,12 @@ def list_documents(
 @router.post(
     "",
     response_model=schemas.Document,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_document(payload: schemas.DocumentCreate, db: Session = Depends(get_db)) -> Document:
+def create_document(payload: schemas.DocumentCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Document:
     document = Document(**payload.model_dump(exclude_unset=True))
     db.add(document)
-    commit(db, Document, _LABEL)
+    commit(db, Document, _LABEL, actor.id)
     db.refresh(document)
     return document
 
@@ -83,17 +82,17 @@ def get_document(document_pk: int, db: Session = Depends(get_db)) -> Document:
 @router.put(
     "/{document_pk}",
     response_model=schemas.Document,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_document(
     document_pk: int,
     payload: schemas.DocumentUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Document:
     """Patch a document: only the fields present in the payload are changed."""
     document = get_or_404(db, Document, document_pk, _LABEL)
     apply_update(document, payload.model_dump(exclude_unset=True))
-    commit(db, Document, _LABEL)
+    commit(db, Document, _LABEL, actor.id)
     db.refresh(document)
     return document
 
@@ -102,13 +101,12 @@ def update_document(
 
 @router.delete(
     "/{document_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_document(document_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_document(document_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     document = get_or_404(db, Document, document_pk, _LABEL)
     db.delete(document)
-    commit(db, Document, _LABEL)
+    commit(db, Document, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

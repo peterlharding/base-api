@@ -58,12 +58,11 @@ def list_users(
 
 @router.post("",
              response_model=schemas.User,
-             dependencies=[Depends(jwt_bearer)],
              status_code=status.HTTP_201_CREATED)
-def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> ApplicationUser:
+def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> ApplicationUser:
     user = ApplicationUser(**payload.model_dump(exclude_unset=True))
     db.add(user)
-    commit(db, ApplicationUser, _LABEL)
+    commit(db, ApplicationUser, _LABEL, actor.id)
     db.refresh(user)
     return user
 
@@ -81,17 +80,17 @@ def get_user(user_pk: int, db: Session = Depends(get_db)) -> ApplicationUser:
 # -----------------------------------------------------------------------------
 
 @router.put("/{user_pk}",
-            response_model=schemas.User,
-            dependencies=[Depends(jwt_bearer)])
+            response_model=schemas.User,)
 def update_user(
     user_pk: int,
     payload: schemas.UserUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> ApplicationUser:
     """Patch a user: only the fields present in the payload are changed."""
     user = get_or_404(db, ApplicationUser, user_pk, _LABEL)
     apply_update(user, payload.model_dump(exclude_unset=True))
-    commit(db, ApplicationUser, _LABEL)
+    commit(db, ApplicationUser, _LABEL, actor.id)
     db.refresh(user)
     return user
 
@@ -99,12 +98,11 @@ def update_user(
 # -----------------------------------------------------------------------------
 
 @router.delete("/{user_pk}",
-                status_code=status.HTTP_204_NO_CONTENT,
-                dependencies=[Depends(jwt_bearer)])
-def delete_user(user_pk: int, db: Session = Depends(get_db)) -> None:
+                status_code=status.HTTP_204_NO_CONTENT,)
+def delete_user(user_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     user = get_or_404(db, ApplicationUser, user_pk, _LABEL)
     db.delete(user)
-    commit(db, ApplicationUser, _LABEL)
+    commit(db, ApplicationUser, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

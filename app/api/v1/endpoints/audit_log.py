@@ -64,7 +64,7 @@ def list_audit_log(
 @router.post("", response_model=schemas.AuditLog, status_code=status.HTTP_201_CREATED)
 def create_audit_entry(
     payload: schemas.AuditLogCreate,
-    user: ApplicationUser = Depends(jwt_bearer),
+    actor: ApplicationUser = Depends(jwt_bearer),
     db: Session = Depends(get_db),
 ) -> AuditLog:
     """Record an entry, attributed to the token holder.
@@ -72,9 +72,9 @@ def create_audit_entry(
     Takes the user from the dependency rather than `dependencies=[...]`,
     because here the identity is the point: it is what gets written.
     """
-    entry = AuditLog(**payload.model_dump(exclude_unset=True), user_id=str(user.guid))
+    entry = AuditLog(**payload.model_dump(exclude_unset=True), user_id=str(actor.guid))
     db.add(entry)
-    commit(db, AuditLog, _LABEL)
+    commit(db, AuditLog, _LABEL, actor.id)
     db.refresh(entry)
     return entry
 

@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Account
+from app.models      import ApplicationUser, Account
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -55,13 +55,12 @@ def list_accounts(
 @router.post(
     "",
     response_model=schemas.Account,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_account(payload: schemas.AccountCreate, db: Session = Depends(get_db)) -> Account:
+def create_account(payload: schemas.AccountCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Account:
     account = Account(**payload.model_dump(exclude_unset=True))
     db.add(account)
-    commit(db, Account, _LABEL)
+    commit(db, Account, _LABEL, actor.id)
     db.refresh(account)
     return account
 
@@ -83,17 +82,17 @@ def get_account(account_pk: int, db: Session = Depends(get_db)) -> Account:
 @router.put(
     "/{account_pk}",
     response_model=schemas.Account,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_account(
     account_pk: int,
     payload: schemas.AccountUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Account:
     """Patch an account: only the fields present in the payload are changed."""
     account = get_or_404(db, Account, account_pk, _LABEL)
     apply_update(account, payload.model_dump(exclude_unset=True))
-    commit(db, Account, _LABEL)
+    commit(db, Account, _LABEL, actor.id)
     db.refresh(account)
     return account
 
@@ -102,13 +101,12 @@ def update_account(
 
 @router.delete(
     "/{account_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_account(account_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_account(account_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     account = get_or_404(db, Account, account_pk, _LABEL)
     db.delete(account)
-    commit(db, Account, _LABEL)
+    commit(db, Account, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

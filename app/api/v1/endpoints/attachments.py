@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Attachment
+from app.models      import ApplicationUser, Attachment
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -54,13 +54,12 @@ def list_attachments(
 @router.post(
     "",
     response_model=schemas.Attachment,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_attachment(payload: schemas.AttachmentCreate, db: Session = Depends(get_db)) -> Attachment:
+def create_attachment(payload: schemas.AttachmentCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Attachment:
     row = Attachment(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Attachment, _LABEL)
+    commit(db, Attachment, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -82,17 +81,17 @@ def get_attachment(attachment_pk: int, db: Session = Depends(get_db)) -> Attachm
 @router.put(
     "/{attachment_pk}",
     response_model=schemas.Attachment,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_attachment(
     attachment_pk: int,
     payload: schemas.AttachmentUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Attachment:
     """Patch a attachment: only the fields present in the payload are changed."""
     row = get_or_404(db, Attachment, attachment_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Attachment, _LABEL)
+    commit(db, Attachment, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -101,13 +100,12 @@ def update_attachment(
 
 @router.delete(
     "/{attachment_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_attachment(attachment_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_attachment(attachment_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Attachment, attachment_pk, _LABEL)
     db.delete(row)
-    commit(db, Attachment, _LABEL)
+    commit(db, Attachment, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

@@ -4,8 +4,10 @@
 """Pydantic schemas for the version 1 API.
 
 Mirrors application_user minus the server-managed parts: ``hashed_password``
-is never exposed, and the audit columns (created_at / updated_at /
-last_login_date and the *_by_id stamps) are only read back, never written.
+is never exposed.  created_at / updated_at / last_login_date and the
+created_by_id / updated_by_id stamps are read back but never written: the
+stamps come from the bearer token, so a client cannot claim to be someone
+else.
 """
 # -----------------------------------------------------------------------------
 
@@ -84,6 +86,8 @@ class User(UserBase):
     last_login_date: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -174,6 +178,8 @@ class Contact(ContactBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -254,6 +260,8 @@ class Account(AccountBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -321,6 +329,8 @@ class Task(TaskBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -394,6 +404,8 @@ class Event(EventBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -450,6 +462,8 @@ class Document(DocumentBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -499,6 +513,8 @@ class Note(NoteBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -569,6 +585,8 @@ class Opportunity(OpportunityBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -650,6 +668,8 @@ class Lead(LeadBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -711,6 +731,8 @@ class Quote(QuoteBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -810,6 +832,8 @@ class Attachment(AttachmentBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -864,6 +888,8 @@ class UserRole(UserRoleBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    created_by_id: int | None = None
+    updated_by_id: int | None = None
 
 
 # -----------------------------------------------------------------------------

@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import UserRole
+from app.models      import ApplicationUser, UserRole
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -58,16 +58,16 @@ def list_user_roles(
 @router.post(
     "",
     response_model=schemas.UserRole,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
 def create_user_role(
     payload: schemas.UserRoleCreate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> UserRole:
     row = UserRole(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, UserRole, _LABEL)
+    commit(db, UserRole, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -89,17 +89,17 @@ def get_user_role(user_role_pk: int, db: Session = Depends(get_db)) -> UserRole:
 @router.put(
     "/{user_role_pk}",
     response_model=schemas.UserRole,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_user_role(
     user_role_pk: int,
     payload: schemas.UserRoleUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> UserRole:
     """Patch a user role: only the fields present in the payload are changed."""
     row = get_or_404(db, UserRole, user_role_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, UserRole, _LABEL)
+    commit(db, UserRole, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -108,13 +108,12 @@ def update_user_role(
 
 @router.delete(
     "/{user_role_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_user_role(user_role_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_user_role(user_role_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, UserRole, user_role_pk, _LABEL)
     db.delete(row)
-    commit(db, UserRole, _LABEL)
+    commit(db, UserRole, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Lead
+from app.models      import ApplicationUser, Lead
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -55,13 +55,12 @@ def list_leads(
 @router.post(
     "",
     response_model=schemas.Lead,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_lead(payload: schemas.LeadCreate, db: Session = Depends(get_db)) -> Lead:
+def create_lead(payload: schemas.LeadCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Lead:
     row = Lead(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Lead, _LABEL)
+    commit(db, Lead, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -83,17 +82,17 @@ def get_lead(lead_pk: int, db: Session = Depends(get_db)) -> Lead:
 @router.put(
     "/{lead_pk}",
     response_model=schemas.Lead,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_lead(
     lead_pk: int,
     payload: schemas.LeadUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Lead:
     """Patch a lead: only the fields present in the payload are changed."""
     row = get_or_404(db, Lead, lead_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Lead, _LABEL)
+    commit(db, Lead, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -102,13 +101,12 @@ def update_lead(
 
 @router.delete(
     "/{lead_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_lead(lead_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_lead(lead_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Lead, lead_pk, _LABEL)
     db.delete(row)
-    commit(db, Lead, _LABEL)
+    commit(db, Lead, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

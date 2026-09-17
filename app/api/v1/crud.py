@@ -52,12 +52,48 @@ def _conflict_field(exc: IntegrityError, table: str) -> str | None:
 
 # -----------------------------------------------------------------------------
 
-def commit(db: Session, model: type[ModelT], label: str) -> None:
+def _stamp(db: Session, actor_id: int | None) -> None:
+    """Record who is writing, on the rows about to be written.
+
+    Applied here rather than in each endpoint because every write already
+    funnels through commit(), so there is one place to get it right and no
+    route can quietly skip it.
+
+    Only tables that carry the columns are touched - access, audit_log and
+    login_session do not have them.  created_by_id is set once, on insert;
+    updated_by_id on every write.  Neither is exposed on the write schemas,
+    so a client cannot claim to be someone else: the value comes from the
+    bearer token or not at all.
+    """
+    if actor_id is None:
+        return
+
+    for obj in db.new:
+        columns = obj.__table__.columns
+        if "created_by_id" in columns and obj.created_by_id is None:
+            obj.created_by_id = actor_id
+        if "updated_by_id" in columns:
+            obj.updated_by_id = actor_id
+
+    for obj in db.dirty:
+        if "updated_by_id" in obj.__table__.columns:
+            obj.updated_by_id = actor_id
+
+
+# -----------------------------------------------------------------------------
+
+def commit(db: Session, model: type[ModelT], label: str, actor_id: int | None) -> None:
     """Commit, turning constraint violations into 4xx instead of a 500.
 
     The session is rolled back first: after an IntegrityError the transaction
     is aborted, and any later use of the session would fail too.
+
+    ``actor_id`` is required rather than defaulted, so a new endpoint that
+    forgets it fails loudly at import rather than silently writing rows with
+    no provenance.  Pass None only where there genuinely is no actor.
     """
+    _stamp(db, actor_id)
+
     try:
         db.commit()
     except IntegrityError as exc:

@@ -10,13 +10,7 @@ front end can `POST` its own activity to `/api/v1/audit-log`.
 What is missing is the API recording its own mutations - a create, update or
 delete through any CRUD route leaves no trace.
 
-## 2. `created_by_id` / `updated_by_id` are never set
-
-Every table carries them and every row has them NULL.
-Now unblocked - the bearer dependency yields the acting user, so the CRUD
-layer could stamp them.
-
-## 3. Migrations have no tests
+## 2. Migrations have no tests
 
 Nothing exercises a migration against data.
 Every test runs against a database already at head, so a migration that

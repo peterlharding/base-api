@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Opportunity
+from app.models      import ApplicationUser, Opportunity
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -56,13 +56,12 @@ def list_opportunities(
 @router.post(
     "",
     response_model=schemas.Opportunity,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_opportunity(payload: schemas.OpportunityCreate, db: Session = Depends(get_db)) -> Opportunity:
+def create_opportunity(payload: schemas.OpportunityCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Opportunity:
     row = Opportunity(**payload.model_dump(exclude_unset=True))
     db.add(row)
-    commit(db, Opportunity, _LABEL)
+    commit(db, Opportunity, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -84,17 +83,17 @@ def get_opportunity(opportunity_pk: int, db: Session = Depends(get_db)) -> Oppor
 @router.put(
     "/{opportunity_pk}",
     response_model=schemas.Opportunity,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_opportunity(
     opportunity_pk: int,
     payload: schemas.OpportunityUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Opportunity:
     """Patch a opportunity: only the fields present in the payload are changed."""
     row = get_or_404(db, Opportunity, opportunity_pk, _LABEL)
     apply_update(row, payload.model_dump(exclude_unset=True))
-    commit(db, Opportunity, _LABEL)
+    commit(db, Opportunity, _LABEL, actor.id)
     db.refresh(row)
     return row
 
@@ -103,13 +102,12 @@ def update_opportunity(
 
 @router.delete(
     "/{opportunity_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_opportunity(opportunity_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_opportunity(opportunity_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     row = get_or_404(db, Opportunity, opportunity_pk, _LABEL)
     db.delete(row)
-    commit(db, Opportunity, _LABEL)
+    commit(db, Opportunity, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------

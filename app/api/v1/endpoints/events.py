@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
-from app.models      import Event
+from app.models      import ApplicationUser, Event
 from app.db.session  import get_db
 from app.auth.bearer import jwt_bearer
 
@@ -56,13 +56,12 @@ def list_events(
 @router.post(
     "",
     response_model=schemas.Event,
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_201_CREATED
 )
-def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db)) -> Event:
+def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> Event:
     event = Event(**payload.model_dump(exclude_unset=True))
     db.add(event)
-    commit(db, Event, _LABEL)
+    commit(db, Event, _LABEL, actor.id)
     db.refresh(event)
     return event
 
@@ -84,17 +83,17 @@ def get_event(event_pk: int, db: Session = Depends(get_db)) -> Event:
 @router.put(
     "/{event_pk}",
     response_model=schemas.Event,
-    dependencies=[Depends(jwt_bearer)]
 )
 def update_event(
     event_pk: int,
     payload: schemas.EventUpdate,
     db: Session = Depends(get_db),
+    actor: ApplicationUser = Depends(jwt_bearer),
 ) -> Event:
     """Patch a event: only the fields present in the payload are changed."""
     event = get_or_404(db, Event, event_pk, _LABEL)
     apply_update(event, payload.model_dump(exclude_unset=True))
-    commit(db, Event, _LABEL)
+    commit(db, Event, _LABEL, actor.id)
     db.refresh(event)
     return event
 
@@ -103,13 +102,12 @@ def update_event(
 
 @router.delete(
     "/{event_pk}",
-    dependencies=[Depends(jwt_bearer)],
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_event(event_pk: int, db: Session = Depends(get_db)) -> None:
+def delete_event(event_pk: int, db: Session = Depends(get_db), actor: ApplicationUser = Depends(jwt_bearer)) -> None:
     event = get_or_404(db, Event, event_pk, _LABEL)
     db.delete(event)
-    commit(db, Event, _LABEL)
+    commit(db, Event, _LABEL, actor.id)
 
 
 # -----------------------------------------------------------------------------
