@@ -6,6 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.9.0] - 2026-09-17
+
+**Breaking: every /api/v1 CRUD route now requires a bearer token.**
+An unauthenticated client that worked against 0.8.1 receives 401.
+
+### Added
+
+- JWT authentication.
+  `POST /api/v1/auth/authenticate` takes two layers - HTTP Basic against
+  `api_credentials` for the calling client, and a JSON body against
+  `application_user` for the user - and issues a token valid for an hour.
+  `POST /api/v1/auth/refresh` exchanges a valid, or recently expired, token
+  for a fresh one: the signature is always verified, only the expiry is
+  waived, and only within 24 hours.
+- `app/auth/password.py`, bcrypt hashing in one place.
+  Rejects inputs over 72 bytes rather than letting bcrypt truncate them,
+  which would make two passwords sharing a prefix both verify.
+- `app/auth/bearer.py`, the `jwt_bearer` dependency, applied to all 65 CRUD
+  routes across thirteen resources.
+  It resolves a token to an `ApplicationUser`, so a caller cannot forget to
+  act on the result.
+- `tests/test_auth.py` and `tests/test_route_protection.py` - 121 tests.
+  The latter derives its route list from the live OpenAPI schema, so a
+  resource added later is covered without extending the file.
+- `pyjwt` and `bcrypt` dependencies.
+- `JWT_SECRET` and `JWT_ALGORITHM` in `setup/env.template`.
+
+### Changed
+
+- Sample passwords are bcrypt digests.
+  The plaintext is `sample-password`, documented in both seed files; the
+  previous SHA-256 digests could not be reversed, so it had to be chosen
+  rather than preserved.
+- The `api_credentials` sample row moved from `db/schema/create/`, which
+  migration `0002` executes, to `db/schema/data/`.
+  A migration runs once, so a credential seeded there could never be changed
+  again - which is why dev could not authenticate after the move to bcrypt.
+- `jwt_secret` has no default.
+  A committed fallback is a secret everyone with the repository knows, used
+  silently by any deployment missing a `.env`.
+  Signing and verification now fail with a clear message while it is unset,
+  and enforce the RFC 7518 32-byte minimum for HS256 that PyJWT only warns
+  about.
+
+### Fixed
+
+- Nothing logs a password, a token or the signing secret.
+  The imported auth code did, at eighteen places.
+- `/health` and the auth endpoints remain unauthenticated, the former because
+  it is a liveness probe and the latter because no client could otherwise
+  obtain a token.
+  A test asserts the latter with real credentials.
+
 ## [0.8.1] - 2026-09-17
 
 ### Added
