@@ -31,9 +31,10 @@ Recorded so they are not mistaken for oversights.
 - **Logout revokes one token, not every token a user holds.**
   Signing out on one device leaves other devices signed in.
   A revoke-all would be a separate endpoint.
-- **Nothing prunes `token_blacklist`.**
-  Rows carry an `expiry` so they can be deleted once the token would have
-  expired anyway, but no job does it.
+- **`token_blacklist` is pruned on logout, not on a schedule.**
+  The table only grows on logout, so that is where it is kept in check.
+  `make prune-blacklist` covers a deployment where nobody signs out for a
+  long stretch; nothing runs it automatically.
 - **Migration tests use their own database.**
   `tests/test_migrations.py` creates and drops a scratch database per
   session, because it moves the schema version around.

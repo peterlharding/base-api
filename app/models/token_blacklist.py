@@ -64,3 +64,33 @@ class TokenBlacklist(Base):
 
 
 # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def prune_expired(cls, session, *, now=None) -> int:
+        """Delete rows whose token has expired anyway.  Returns the count.
+
+        A blacklist entry only has to outlive the token it revokes: once the
+        expiry has passed, the token fails validation on its own and the row
+        is answering a question nobody will ask.  Without this the table
+        grows by one row per logout and never shrinks.
+
+        Safe to call concurrently - it deletes only rows that are already
+        past their expiry, so two callers racing simply delete the same
+        already-dead rows.
+
+        The expiry index makes this a range scan rather than a table scan.
+        """
+        from datetime import datetime, timezone
+
+        from sqlalchemy import delete
+
+        cutoff = now or datetime.now(timezone.utc)
+
+        return session.execute(
+            delete(cls).where(cls.expiry < cutoff)
+        ).rowcount
+
+
+# -----------------------------------------------------------------------------

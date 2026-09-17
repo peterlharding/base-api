@@ -327,7 +327,16 @@ def logout(
     if session is not None and session.revoked_at is None:
         session.revoked_at = datetime.now(timezone.utc)
 
+    # Opportunistic: the table only grows here, so this is the one place that
+    # can keep it in check without a scheduler.  The row just added has a
+    # future expiry and is not touched.  scripts/prune_blacklist.py does the
+    # same thing for a deployment where nobody logs out for a long stretch.
+    pruned = TokenBlacklist.prune_expired(db)
+
     db.commit()
+
+    if pruned:
+        logger.info("logout: pruned %s expired blacklist row(s)", pruned)
 
     logger.info("logout: revoked a token for user id %s", actor.id)
 

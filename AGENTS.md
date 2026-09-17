@@ -18,6 +18,8 @@ make test-db-reset  # down + up: clean database, migrations re-run
 make migrate        # alembic -c db/alembic.ini upgrade head
 make seed           # load db/schema/data sample rows (refuses if tables are non-empty)
 make seed-reset     # truncate the seeded tables first, then load
+make prune-blacklist          # delete expired token_blacklist rows
+make prune-blacklist-dry-run  # report what would be deleted
 make autogenerate msg="..."   # alembic revision --autogenerate
 make git-chk        # status + last 8 commits + stat of HEAD
 ```
@@ -180,6 +182,9 @@ the asymmetry is deliberate:
 Only that token - signing out on one device does not sign the user out everywhere.
 The blacklist is consulted in **two** places, and both are load-bearing: `bearer.resolve()` for ordinary requests, and `refresh` separately, because refresh reads the Authorization header itself rather than going through the dependency.
 Without the second check a revoked token could be exchanged for a fresh one and logout would achieve nothing.
+
+`token_blacklist` only grows on logout, so logout is also where it is pruned: a row only has to outlive the token it revokes, and once the expiry passes the token fails validation on its own.
+`make prune-blacklist` (and `--dry-run`) does the same for a deployment where nobody signs out for a long stretch.
 
 * **`login-sessions`** is read-only.
   The API writes a row itself when it issues a token (`record_login_session`
