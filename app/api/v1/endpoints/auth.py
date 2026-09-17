@@ -22,7 +22,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 
@@ -99,6 +99,15 @@ class AuthPayload(BaseModel):
     token: str
     refresh_interval: int
     user: AuthenticatedUser
+
+
+# -----------------------------------------------------------------------------
+
+class RevocationPayload(BaseModel):
+    """What revoke-all did, so a client can say so rather than guess."""
+
+    revoked_before: datetime
+    sessions_ended: int
 
 
 # -----------------------------------------------------------------------------
@@ -264,6 +273,16 @@ def refresh(request: Request, db: Session = Depends(get_db)) -> dict:
     if user is None or not user.is_active:
         raise _unauthorised("Bearer")
 
+    # As with the blacklist above: refresh does not go through jwt_bearer, so
+    # a cutoff enforced only there would let a revoked token be exchanged for
+    # a fresh one and revoke-all would achieve nothing.
+    if user.rejects_token_issued_at(payload.get("iat")):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     issued = _issue(user)
 
     _touch_session(db, token, user)
@@ -339,6 +358,62 @@ def logout(
         logger.info("logout: pruned %s expired blacklist row(s)", pruned)
 
     logger.info("logout: revoked a token for user id %s", actor.id)
+
+
+# -----------------------------------------------------------------------------
+
+@router.post(
+    "/revoke-all",
+    response_model=RevocationPayload
+)
+def revoke_all(
+    actor: ApplicationUser = Depends(jwt_bearer),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Revoke every token issued to the caller, on every device.
+
+    Where logout revokes one token, this revokes all of them - the answer to
+    a lost laptop or a password someone else has seen.  It stamps
+    application_user.tokens_revoked_before, and both places that accept a
+    token refuse anything issued before it: the bearer dependency, and
+    refresh separately, because refresh reads the Authorization header itself
+    rather than going through the dependency.
+
+    A cutoff rather than a blacklist entry per token.  token_blacklist is
+    keyed on jti and there is no list of a user's outstanding jtis to walk:
+    login_session holds a hash of the token rather than its id, and a token
+    obtained from refresh creates no session row at all.  Anything built on
+    those records would miss precisely the tokens most worth revoking.  A
+    timestamp compared against a claim every token already carries misses
+    none of them, and adds no rows.
+
+    Includes the token this request was made with, which therefore stops
+    working as this returns.  That is the honest reading of "revoke all", and
+    sparing the current device would be a second rule to get wrong at the
+    moment it matters.  Sign in again to carry on.
+
+    The user's login_session rows are stamped revoked_at so the session list
+    agrees with what happened, rather than showing sessions that quietly
+    stopped being refreshed.
+    """
+    now = datetime.now(timezone.utc)
+
+    actor.revoke_tokens(now=now)
+
+    # Only the ones still open: re-stamping a session that was revoked at
+    # logout would rewrite when that happened.
+    ended = db.execute(
+        update(LoginSession)
+        .where(LoginSession.user_id == actor.id, LoginSession.revoked_at.is_(None))
+        .values(revoked_at=now)
+    ).rowcount
+
+    db.commit()
+
+    logger.info("revoke-all: revoked every token for user id %s, ended %s session(s)",
+                actor.id, ended)
+
+    return {"revoked_before": now, "sessions_ended": ended}
 
 
 # -----------------------------------------------------------------------------

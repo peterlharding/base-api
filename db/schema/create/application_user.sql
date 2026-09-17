@@ -51,6 +51,12 @@ CREATE TABLE public.application_user (
 
     last_login_date             timestamptz,
 
+    -- Every token issued to this user before this instant is revoked.  NULL
+    -- means none have been.  See POST /api/v1/auth/revoke-all: the check is
+    -- against the token's own iat, so it covers tokens this database has no
+    -- record of, including ones obtained by refresh.
+    tokens_revoked_before       timestamptz,
+
     created_at                  timestamptz NOT NULL DEFAULT now(),
     created_by_id               bigint,
     updated_at                  timestamptz NOT NULL DEFAULT now(),

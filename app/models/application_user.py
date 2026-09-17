@@ -118,6 +118,11 @@ class ApplicationUser(Base):
         DateTime(timezone=True)
     )
 
+    # Set by POST /api/v1/auth/revoke-all; NULL until it is used.
+    tokens_revoked_before:        Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+
     # created_at / updated_at are server-maintained: updated_at is advanced by
     # the application_user_set_updated_at trigger, never written by the app.
     created_at:                   Mapped[datetime]    = mapped_column(
@@ -141,6 +146,55 @@ class ApplicationUser(Base):
         from app.auth.password import verify_password
 
         return verify_password(password, self.hashed_password)
+
+
+    # -------------------------------------------------------------------------
+    # Wholesale revocation.
+    #
+    # A blacklist cannot do this job.  It is keyed on jti, and the only place
+    # a jti is recorded is the blacklist itself, so there is no list of a
+    # user's outstanding tokens to walk - login_session stores a hash of the
+    # token, not its id, and a token obtained from refresh creates no session
+    # row at all.  A cutoff compares against a claim the token carries, so it
+    # covers every token ever issued to this user without having to have seen
+    # any of them.
+
+    def revoke_tokens(self, *, now=None):
+        """Revoke every token issued to this user.  Returns the cutoff.
+
+        Including the one the caller is holding: revoke-all means all, and a
+        carve-out for the current device would be a second rule to get wrong.
+        """
+        from datetime import datetime, timezone
+
+        self.tokens_revoked_before = now or datetime.now(timezone.utc)
+
+        return self.tokens_revoked_before
+
+
+    # -------------------------------------------------------------------------
+
+    def rejects_token_issued_at(self, issued_at: float | int | None) -> bool:
+        """True if a token with this ``iat`` falls before the revocation cutoff.
+
+        ``iat`` is seconds since the epoch, fractional since v0.15.0.  An
+        integer one predates that release and truncates towards the past, so
+        it can only make a token look older than it was - which errs towards
+        revoking, never away from it.
+
+        A token carrying no ``iat`` is rejected once a cutoff exists, because
+        there is then no way to place it relative to one.  Nothing this API
+        issues is in that position.
+        """
+        from datetime import datetime, timezone
+
+        if self.tokens_revoked_before is None:
+            return False
+
+        if issued_at is None:
+            return True
+
+        return datetime.fromtimestamp(issued_at, tz=timezone.utc) < self.tokens_revoked_before
 
 
     # -------------------------------------------------------------------------

@@ -105,6 +105,14 @@ class JWTBearer(HTTPBearer):
         if not user.is_active:
             raise _unauthorised("User is not active")
 
+        # Wholesale revocation, which the blacklist cannot express: it is
+        # keyed on jti and nobody holds a list of a user's outstanding ones.
+        # Same detail as the blacklist path on purpose - which mechanism
+        # revoked the token is not the caller's business.
+        if user.rejects_token_issued_at(payload.get("iat")):
+            logger.info("rejected a token issued before a revoke-all")
+            raise _unauthorised("Token has been revoked")
+
         return user
 
 

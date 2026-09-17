@@ -61,6 +61,15 @@ def sign_token(user_guid: str, ttl: timedelta = TOKEN_TTL) -> str:
     ``jti`` is a fresh uuid on every call so a single token can be revoked
     without invalidating every other token held by the same user - that is
     what token_blacklist stores.
+
+    ``iat`` is written as a float rather than letting PyJWT truncate a
+    datetime to whole seconds.  RFC 7519 allows a non-integer NumericDate,
+    and the precision is what application_user.tokens_revoked_before is
+    compared against: at one-second resolution, a token minted in the same
+    second as a revoke-all either survives it or is killed by it depending
+    on which side of the truncation it lands, and neither answer is one to
+    leave to rounding.  ``exp`` stays a datetime - a second either way on an
+    hour-long token decides nothing.
     """
     now = datetime.now(timezone.utc)
 
@@ -68,7 +77,7 @@ def sign_token(user_guid: str, ttl: timedelta = TOKEN_TTL) -> str:
         {
             "sub": str(user_guid),
             "jti": str(uuid.uuid4()),
-            "iat": now,
+            "iat": now.timestamp(),
             "exp": now + ttl,
         },
         _secret(),

@@ -248,3 +248,63 @@ def test_the_trigger_works_after_a_full_migration(migrate) -> None:
         stamped = s.execute(text("SELECT updated_at FROM account")).scalar()
 
     assert stamped.year > 2000, "the trigger did not overwrite the planted value"
+
+
+# -----------------------------------------------------------------------------
+
+def test_0007_adds_the_column_to_an_existing_table(migrate) -> None:
+    """The column reaches a database that already holds users.
+
+    db/schema/create/application_user.sql declares it too, so a fresh build
+    arrives at 0007 with the work already done and the ALTER is a no-op.
+    That is the path every other test takes; this one is the other path, and
+    it is the only one that runs on a deployed database.
+    """
+    migrate.to("0006")
+
+    with migrate.session() as s:
+        s.execute(text("INSERT INTO application_user (username, guid)"
+                       " VALUES ('predates', '22222222-2222-2222-2222-222222222222')"))
+        s.commit()
+
+    migrate.to("0007")
+
+    with migrate.session() as s:
+        assert s.execute(text("SELECT username FROM application_user")).scalar() == "predates"
+        assert s.execute(text(
+            "SELECT tokens_revoked_before FROM application_user")).scalar() is None, (
+            "an existing user came out of the migration with tokens revoked")
+
+
+# -----------------------------------------------------------------------------
+
+def test_0007_survives_being_applied_twice(migrate) -> None:
+    """ADD COLUMN IF NOT EXISTS, because the create script declares it too.
+
+    A fresh build gets the column from 0001 and then runs this migration over
+    the top of it.  Without IF NOT EXISTS that build fails outright, which is
+    the same shape as the constraint duplication the create scripts avoid.
+    """
+    migrate.to("head")
+    migrate.to("0006")
+    migrate.to("head")
+
+    with migrate.session() as s:
+        assert s.execute(text(
+            "SELECT count(*) FROM information_schema.columns"
+            " WHERE table_name = 'application_user'"
+            "   AND column_name = 'tokens_revoked_before'")).scalar() == 1
+
+
+# -----------------------------------------------------------------------------
+
+def test_0007_stamps_the_schema_version(migrate) -> None:
+    """instance_metadata reports the release the schema last changed in.
+
+    A migration that alters the schema without updating it leaves the
+    endpoint describing an older database than the one it is talking to.
+    """
+    migrate.to("head")
+
+    with migrate.session() as s:
+        assert s.execute(text("SELECT db_version FROM instance_metadata")).scalar() == "v0.15.0"

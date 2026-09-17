@@ -84,6 +84,10 @@ class User(UserBase):
 
     id: int
     last_login_date: datetime | None = None
+
+    # Server-managed, like the audit stamps: readable, and absent from the
+    # write schemas so a client cannot un-revoke its own tokens with a PUT.
+    tokens_revoked_before: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
     created_by_id: int | None = None

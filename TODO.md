@@ -2,12 +2,10 @@
 
 Outstanding work on base-api, roughly in the order it is worth doing.
 
-## 1. No revoke-all
+Nothing outstanding.
+The deliberate non-goals below are decisions, not a backlog.
 
-Signing out one device leaves the others signed in, so there is no way
-to respond to a compromised account in one action.
-
-Current release: v0.7.1.
+Current release: v0.15.0.
 
 ---
 
@@ -29,7 +27,8 @@ Recorded so they are not mistaken for oversights.
   `ADD CONSTRAINT IF NOT EXISTS`.
 - **Logout revokes one token, not every token a user holds.**
   Signing out on one device leaves other devices signed in.
-  A revoke-all would be a separate endpoint.
+  `POST /api/v1/auth/revoke-all` is the separate endpoint for when that is
+  not what is wanted, added in v0.15.0.
 - **Nothing runs `make prune` on a schedule.**
   The retention policy exists and is applied on demand; a deployment wants a
   cron entry.  `scripts/prune.py` carries the line.

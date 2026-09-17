@@ -130,6 +130,10 @@ That second rule does **not** hold for constraints.
 Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so a constraint written into a create script *and* added by a later migration is applied twice on a fresh build, and the migration fails.
 Constraints therefore live only in the migration that introduces them, which is why `0004` adds 25 foreign keys that `db/schema/create/*.sql` does not mention.
 
+Columns are the other way round: `ADD COLUMN IF NOT EXISTS` does exist, so a new column belongs in **both** the create script and a migration.
+A fresh build gets it from the create script and the migration is a no-op; an existing database gets it from the migration.
+`0007` is the worked example, and `tests/test_migrations.py` exercises both paths, because only one of them is what a deployed database does.
+
 The chain is three migrations, each executing a group of scripts:
 
 | revision | installs |
@@ -186,8 +190,17 @@ the asymmetry is deliberate:
 
 `POST /api/v1/auth/logout` revokes the token the request was made with: its `jti` goes into `token_blacklist`, and the matching `login_session` is stamped `revoked_at`.
 Only that token - signing out on one device does not sign the user out everywhere.
-The blacklist is consulted in **two** places, and both are load-bearing: `bearer.resolve()` for ordinary requests, and `refresh` separately, because refresh reads the Authorization header itself rather than going through the dependency.
-Without the second check a revoked token could be exchanged for a fresh one and logout would achieve nothing.
+
+`POST /api/v1/auth/revoke-all` is the one that does, including the token it was called with.
+It stamps `application_user.tokens_revoked_before` and every token issued before that instant is refused.
+A cutoff rather than a blacklist row per token, because there is no list of a user's outstanding tokens to walk: `token_blacklist` is keyed on `jti`, `login_session` stores a hash of the token rather than its id, and a token obtained from `refresh` creates no session row at all.
+Anything built on those records would miss exactly the tokens most worth revoking.
+
+Both mechanisms are consulted in **two** places, and both are load-bearing: `bearer.resolve()` for ordinary requests, and `refresh` separately, because refresh reads the Authorization header itself rather than going through the dependency.
+Without the second check a revoked token could be exchanged for a fresh one and revoking would achieve nothing.
+
+`iat` is signed as a float (RFC 7519 permits a non-integer NumericDate) so the cutoff comparison is finer than a second.
+At whole-second resolution a token minted in the same second as a revoke-all lands on either side of the cutoff depending on where the truncation falls.
 
 ### Retention
 
