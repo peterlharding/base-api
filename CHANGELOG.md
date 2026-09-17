@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.11.0] - 2026-09-17
+
+### Added
+
+- `created_by_id` and `updated_by_id` are recorded from the bearer token on
+  the twelve tables that carry them.
+  `created_by_id` is set once on insert, `updated_by_id` on every write.
+  `access`, `audit_log` and `login_session` do not have the columns and are
+  untouched.
+- Both columns are readable on the response schemas.
+  They remain absent from the write schemas, so a client cannot claim the
+  work was done by someone else.
+- `tests/test_audit_stamps.py` - 17 tests, including a sweep across all
+  twelve stamped resources.
+
+### Changed
+
+- `crud.commit()` takes a required `actor_id`.
+  Required rather than defaulted so a new endpoint that forgets it fails at
+  import, rather than silently writing rows with no provenance.
+- Write routes take `actor: ApplicationUser = Depends(jwt_bearer)` as a value
+  instead of `dependencies=[Depends(jwt_bearer)]`.
+  A contextvar set inside a FastAPI dependency does not reach the endpoint
+  body, in either sync or async routes, so the actor cannot be carried
+  implicitly.
+
 ## [0.10.0] - 2026-09-17
 
 ### Added
