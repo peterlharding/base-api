@@ -68,9 +68,11 @@ app/models/            one module per table; __init__ imports all 18 of them
 app/api/v1/router.py   api_router, prefix /api/v1
 app/api/v1/schemas.py  pydantic request/response models
 app/api/v1/crud.py     shared commit/get_or_404/apply_update helpers
-app/api/v1/endpoints/  one module per resource (13: users, accounts, contacts,
-                       tasks, events, documents, notes, opportunities, leads,
-                       quotes, access, attachments, user_roles)
+app/api/v1/endpoints/  one module per resource, plus auth and three that are
+                       not plain CRUD: audit_log, login_sessions,
+                       instance_metadata
+app/auth/              password hashing, JWT sign/decode, bearer dependency
+app/core/version.py    app version, read from pyproject.toml
 db/alembic/            migrations (env.py reuses get_settings())
 db/schema/create/      table DDL - executed by the migrations, not standalone
 db/schema/ddl/         the set_updated_at trigger function
@@ -168,6 +170,32 @@ Any other diff means a model and its `db/schema/create/*.sql` have drifted; the 
 There must be exactly one `DeclarativeBase`: a second would create a second metadata and split the models across the two silently, which no error would report.
 
 Audit columns are named `updated_at` / `updated_by_id` throughout, matching the SQL and the `set_updated_at()` trigger.
+
+### Three resources are not plain CRUD
+
+Most endpoints are the same five operations over a table.  These are not, and
+the asymmetry is deliberate:
+
+* **`login-sessions`** is read-only.
+  The API writes a row itself when it issues a token (`record_login_session`
+  in `app/utils.py`), because a front end that reports its own sessions can
+  decline to, or report someone else's.
+  Only a SHA-256 of the token is stored, and the endpoint never returns even
+  that.
+* **`audit-log`** is append-only: `GET` and `POST`, no `PUT` or `DELETE`.
+  An audit trail the recorded parties can edit is not one.
+  `user_id` comes from the bearer token, never the payload.
+* **`instance-metadata`** is a singleton: one object, no path parameter, no
+  writes.
+  `release`, `db_version` and `notes` come from the row; `app_version` and
+  `alembic_revision` are read at request time, because a version stamped into
+  a row goes stale the moment the application is upgraded without a
+  migration.
+
+`instance_metadata` is excluded from the test suite's per-test TRUNCATE
+(`_KEEP` in `conftest.py`): it describes the database rather than holding
+test data, and migration `0006` stamps the single row that every test is
+entitled to find.
 
 ### API conventions
 

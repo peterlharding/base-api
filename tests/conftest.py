@@ -95,12 +95,22 @@ def migrated_database() -> None:
 
 # -----------------------------------------------------------------------------
 
+# instance_metadata describes the database itself rather than holding test
+# data: one row, stamped by migration 0006, which every test is entitled to
+# find there.  Truncating it would make the endpoint that reads it
+# untestable, and would not be undone by the next test either.
+_KEEP = {"instance_metadata"}
+
+
+# -----------------------------------------------------------------------------
+
 @pytest.fixture(autouse=True)
 def clean_tables() -> None:
     """Wipe every app table before each test.
 
     RESTART IDENTITY keeps primary keys predictable (1, 2, 3, ...) so tests
-    can assert on them.  The table list comes from the model metadata, so
+    can assert on them.  Everything in the model metadata is cleared except
+    _KEEP.  The table list comes from the model metadata, so
     new tables are covered automatically.  (The endpoints call db.commit(),
     so the transaction-rollback isolation pattern is not usable.)
 
@@ -111,11 +121,34 @@ def clean_tables() -> None:
     independent of everything that came before, inside the run or outside it.
     The last test's rows survive the run, which is useful for a post-mortem.
     """
-    tables = ", ".join(f'"{name}"' for name in Base.metadata.tables)
+    tables = ", ".join(
+        f'"{name}"' for name in Base.metadata.tables if name not in _KEEP
+    )
     with SessionLocal() as session:
         session.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
         session.commit()
     yield
+
+
+# -----------------------------------------------------------------------------
+
+# The guid the stand-in user carries, so a test can assert on what a route
+# attributed to it.
+OVERRIDE_USER_GUID = "00000000-0000-4000-8000-000000000001"
+
+
+def _stand_in_user():
+    """An unpersisted ApplicationUser for the overridden bearer dependency."""
+    from uuid import UUID
+
+    from app.models import ApplicationUser
+
+    return ApplicationUser(
+        id=0,
+        guid=UUID(OVERRIDE_USER_GUID),
+        username="test-override",
+        is_active=True,
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -132,9 +165,14 @@ def _bypass_auth():
     on it rather than on a per-route Depends(JWTBearer()) - a fresh instance
     per route has no identity that dependency_overrides can target.
 
+    The stand-in is a real ApplicationUser instance but is never persisted,
+    so it satisfies the routes that take the authenticated user as a value
+    (POST /audit-log attributes entries to it) without adding a row that list
+    and pagination assertions would then have to account for.
+
     Tests that need the real dependency use the `protected_client` fixture.
     """
-    app.dependency_overrides[jwt_bearer] = lambda: None
+    app.dependency_overrides[jwt_bearer] = _stand_in_user
     yield
     app.dependency_overrides.pop(jwt_bearer, None)
 

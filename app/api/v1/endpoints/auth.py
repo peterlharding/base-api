@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 # -----------------------------------------------------------------------------
 
 from app.logger        import logger
+from app.utils         import record_login_session
 from app.models        import ApiCredential, ApplicationUser
 from app.db.session    import get_db
 from app.auth.handler  import TOKEN_TTL, decode_token, sign_token
@@ -105,6 +106,32 @@ def _issue(user: ApplicationUser) -> dict:
     }
 
 
+# -----------------------------------------------------------------------------
+
+def _touch_session(db: Session, old_token: str, user) -> None:
+    """Advance last_seen on the session the refreshed token came from.
+
+    Best effort: a refresh whose original sign-in was never recorded, or was
+    recorded before this existed, simply has nothing to update.
+    """
+    import hashlib
+
+    from app.models import LoginSession
+
+    try:
+        digest = hashlib.sha256(old_token.encode()).digest()
+        session = db.scalar(
+            select(LoginSession).where(LoginSession.session_token_hash == digest)
+        )
+        if session is not None:
+            session.last_seen = datetime.now(timezone.utc)
+            db.commit()
+
+    except Exception as ex:                      # noqa: BLE001
+        db.rollback()
+        logger.warning("could not touch login session for user id %s: %s", user.id, ex)
+
+
 # =============================================================================
 
 @router.post(
@@ -119,13 +146,9 @@ def authenticate(
 ) -> dict:
     """Exchange client Basic Auth plus user credentials for a token."""
 
-    print(f"credentials |{credentials}|")
-
     client = db.scalar(
         select(ApiCredential).where(ApiCredential.email == credentials.username)
     )
-
-    print(f"     client |{client}|")
 
     if client is None or not client.is_correct_password(credentials.password):
         logger.info("authenticate: basic auth rejected")
@@ -134,8 +157,6 @@ def authenticate(
     user = db.scalar(
         select(ApplicationUser).where(ApplicationUser.username == body.username)
     )
-
-    print(f"  user |{user}|")
 
     if user is None or not user.is_correct_password(body.password):
         logger.info("authenticate: user credentials rejected")
@@ -149,9 +170,13 @@ def authenticate(
     db.commit()
     db.refresh(user)
 
+    issued = _issue(user)
+
+    record_login_session(db, user, issued["token"], request)
+
     logger.info("authenticate: issued a token for user id %s", user.id)
 
-    return _issue(user)
+    return issued
 
 
 # -----------------------------------------------------------------------------
@@ -202,9 +227,13 @@ def refresh(request: Request, db: Session = Depends(get_db)) -> dict:
     if user is None or not user.is_active:
         raise _unauthorised("Bearer")
 
+    issued = _issue(user)
+
+    _touch_session(db, token, user)
+
     logger.info("refresh: reissued a token for user id %s", user.id)
 
-    return _issue(user)
+    return issued
 
 
 # -----------------------------------------------------------------------------

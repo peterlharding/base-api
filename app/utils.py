@@ -30,34 +30,53 @@ def format_datetime(value):
 
 # -----------------------------------------------------------------------------
 
-def log_session(user, ip_addr):
+def record_login_session(db, user, token: str, request) -> None:
+    """Record a sign-in against login_session.
 
-    db      = SessionLocal()
+    Written by the API rather than reported by the client: a front end that
+    reports its own sessions can decline to, or report someone else's.  The
+    endpoints under /api/v1/login-sessions are therefore read-only.
 
-    session = LoginSession()
+    Only a SHA-256 of the token is stored.  The row is a record that a
+    session exists, not a place to recover the credential from - a leaked
+    table should not hand out working tokens.
 
-    session.username = user.username
-    session.workstation = ip_addr
-    session.started = datetime.now()
-    session.data = user.user_id
+    Failure to record is logged, never raised: an audit trail that can refuse
+    a sign-in is worse than one with a gap.
+    """
+    import hashlib
+    import ipaddress
 
-    next_id = LoginSession.NextId(db)
+    from datetime import datetime, timezone
 
-    session.id            = next_id
+    from app.auth.handler import TOKEN_TTL
+    from app.models import LoginSession
 
-    db.add(session)
+    host = request.client.host if request.client else None
 
-    print("[log_session]         ***** About to commit session |")
+    # ip_address is INET, so it rejects anything that is not an address -
+    # a proxy reporting a hostname, a unix socket, or TestClient's literal
+    # "testclient".  Those go in workstation, which is free text, rather
+    # than failing the insert and silently losing the sign-in record.
+    try:
+        ip, workstation = str(ipaddress.ip_address(host)), None
+    except ValueError:
+        ip, workstation = None, host
 
     try:
-        db.flush()
+        db.add(LoginSession(
+            session_token_hash=hashlib.sha256(token.encode()).digest(),
+            user_id=user.id,
+            ip_address=ip,
+            workstation=workstation,
+            user_agent=request.headers.get("user-agent"),
+            expires_at=datetime.now(timezone.utc) + TOKEN_TTL,
+        ))
         db.commit()
-    except Exception as ex:
-        db.rollback()
-        logger.info("[log_session]          Rolled back after exception |%s|" % ex)
-        # return {"result":"failed '%s'" % ex}
 
-    print("[log_session]  Completed...")
+    except Exception as ex:                      # noqa: BLE001 - see docstring
+        db.rollback()
+        logger.warning("could not record login session for user id %s: %s", user.id, ex)
 
 
 # -----------------------------------------------------------------------------

@@ -19,7 +19,7 @@ import jwt
 
 # -----------------------------------------------------------------------------
 
-from app.core.config import get_settings
+from app.core.config import JWT_SECRET_PLACEHOLDER, get_settings
 
 
 # -----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def _secret() -> str:
     """The signing secret, or a clear failure saying how to set it."""
     secret = get_settings().jwt_secret
 
-    if not secret:
+    if not secret or secret == JWT_SECRET_PLACEHOLDER:
         raise RuntimeError(
             "JWT_SECRET is not set. Add it to the repo-root .env "
             "(see setup/env.template); there is deliberately no default."

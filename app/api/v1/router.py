@@ -13,11 +13,14 @@ from app.api.v1.endpoints import (
     access,
     accounts,
     attachments,
+    audit_log,
     auth,
     contacts,
     documents,
     events,
+    instance_metadata,
     leads,
+    login_sessions,
     notes,
     opportunities,
     quotes,
@@ -40,7 +43,10 @@ api_v1_router.include_router(accounts.router)
 api_v1_router.include_router(attachments.router)
 api_v1_router.include_router(contacts.router)
 api_v1_router.include_router(documents.router)
+api_v1_router.include_router(audit_log.router)
 api_v1_router.include_router(events.router)
+api_v1_router.include_router(instance_metadata.router)
+api_v1_router.include_router(login_sessions.router)
 api_v1_router.include_router(leads.router)
 api_v1_router.include_router(notes.router)
 api_v1_router.include_router(opportunities.router)

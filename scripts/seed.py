@@ -44,6 +44,7 @@ from app.core.config import get_settings         # noqa: E402
 # enforces this but the data is wrong without it.
 
 ORDER = [
+    "instance_metadata",
     "api_credentials",
     "application_user",
     "user_role",
@@ -60,6 +61,12 @@ ORDER = [
     "access",
 ]
 
+# instance_metadata is stamped by migration 0006 and its data file is an
+# UPDATE, not an INSERT: the singleton index permits one row, and production
+# never runs make seed.  Truncating it would delete the row the UPDATE is
+# meant to adjust, and nothing would put it back.
+_NO_TRUNCATE = {"instance_metadata"}
+
 _DATA = Path(__file__).resolve().parents[1] / "db" / "schema" / "data"
 
 
@@ -69,7 +76,8 @@ def _occupied(session) -> list[str]:
     """Names of target tables that already hold rows."""
     return [
         name for name in ORDER
-        if session.execute(text(f'SELECT 1 FROM "{name}" LIMIT 1')).first()
+        if name not in _NO_TRUNCATE
+        and session.execute(text(f'SELECT 1 FROM "{name}" LIMIT 1')).first()
     ]
 
 
@@ -104,9 +112,11 @@ def main() -> int:
         session.execute(text("SET CONSTRAINTS ALL DEFERRED"))
 
         if args.reset:
-            targets = ", ".join(f'"{name}"' for name in ORDER)
+            targets = ", ".join(
+                f'"{name}"' for name in ORDER if name not in _NO_TRUNCATE
+            )
             session.execute(text(f"TRUNCATE {targets} RESTART IDENTITY CASCADE"))
-            print(f"  truncated {len(ORDER)} tables")
+            print(f"  truncated {len(ORDER) - len(_NO_TRUNCATE)} tables")
 
         for name in ORDER:
             path = _DATA / f"{name}.sql"

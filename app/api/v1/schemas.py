@@ -11,6 +11,7 @@ last_login_date and the *_by_id stamps) are only read back, never written.
 
 from datetime import date, datetime
 from decimal import Decimal
+from ipaddress import IPv4Address, IPv6Address
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -862,6 +863,90 @@ class UserRole(UserRoleBase):
 
     id: int
     created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# LoginSession
+#
+# Read-only: the API records a session when it issues a token, so there is no
+# Create or Update schema.  session_token_hash is deliberately absent - it is
+# a digest of a credential, and a read endpoint has no business returning it.
+
+
+class LoginSession(BaseModel):
+    """A sign-in, as returned by the API."""
+
+    id: int
+    user_id: int
+    workstation: str | None = None
+    # INET deserialises as an ip address object, not a str; pydantic
+    # serialises these back to a string in the JSON response.
+    ip_address: IPv4Address | IPv6Address | None = None
+    user_agent: str | None = None
+    data: dict | None = None
+    started: datetime | None = None
+    last_seen: datetime | None = None
+    expires_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# AuditLog
+#
+# Append-only: create and read, never update or delete.  user_id is absent
+# from the create schema because it is taken from the bearer token - a client
+# does not get to say who did something.
+
+
+class AuditLogCreate(BaseModel):
+    """Payload for POST /audit-log."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    application: str
+    reference_type: int
+    reference_id: int
+    event: str
+    description: str
+    reference: str | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class AuditLog(BaseModel):
+    """An audit entry as returned by the API."""
+
+    id: int
+    application: str
+    reference_type: int
+    reference_id: int
+    reference: str | None = None
+    event: str
+    description: str
+    user_id: str
+    created_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------
+# InstanceMetadata
+#
+# A singleton describing the backend the caller is talking to.  db_version
+# and release come from the table; app_version and alembic_revision are read
+# at runtime, because a value stamped into a row goes stale the moment the
+# application is upgraded without a migration.
+
+
+class InstanceMetadata(BaseModel):
+    """What backend am I talking to."""
+
+    release: str
+    app_version: str
+    db_version: str
+    alembic_revision: str | None = None
+    notes: str = ""
     updated_at: datetime | None = None
 
 

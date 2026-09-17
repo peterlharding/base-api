@@ -20,6 +20,13 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # -----------------------------------------------------------------------------
 
+# The literal default for jwt_secret.  Named so handler.py can reject exactly
+# this value without the two files drifting apart.
+JWT_SECRET_PLACEHOLDER = "<This is replaced bythe value in .env at runtime>"
+
+
+# -----------------------------------------------------------------------------
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=_PROJECT_ROOT / ".env",
@@ -43,8 +50,18 @@ class Settings(BaseSettings):
     db_port: int = 5432
     db_name: str = "base_api"
 
+    # Which deployment this is.  instance_metadata constrains the column to
+    # these four values, and migration 0006 stamps the row from here: a
+    # migration cannot otherwise know whether it is running against dev or
+    # production.
+    release: str = "dev"
+
+    # Token signing.  The default is a placeholder, not a usable secret -
+    # app/auth/handler.py rejects it by name, because a default that merely
+    # looks wrong would still sign perfectly valid tokens on any deployment
+    # missing a .env, using a string that is in the repository.
     jwt_algorithm: str = "HS256"
-    jwt_secret: str = "<This is replaced bythe value in .env at runtime>"
+    jwt_secret: str = JWT_SECRET_PLACEHOLDER
 
     @property
     def database_url(self) -> str:

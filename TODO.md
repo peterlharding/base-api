@@ -3,39 +3,20 @@
 Outstanding work on base-api, roughly in the order it is worth doing.
 Current release: v0.7.1.
 
-## 1. Endpoints for the React front end
+## 1. The API does not write audit_log itself
 
-Three tables exist, are modelled and migrated, and have no endpoints.
-The front end needs all three:
+`login_session` is now recorded server-side on every sign-in, and the
+front end can `POST` its own activity to `/api/v1/audit-log`.
+What is missing is the API recording its own mutations - a create, update or
+delete through any CRUD route leaves no trace.
 
-- **`login_session`** - so the app can record a sign-in and list active
-  sessions.  `app/utils.py` has a `log_session` helper that nothing calls,
-  and whose signature does not match the commented-out call in
-  `app/api/v1/endpoints/auth.py`.
-- **`audit_log`** - so the app can record activity.  Wants `application`,
-  `reference_type`, `reference_id`, `event`, `description` and `user_id` on
-  each mutation.  `user_id` is now available: the bearer dependency resolves
-  a token to an ApplicationUser.
-- **`instance_metadata`** - so the app can report backend and schema
-  versions.  The table carries release and version check constraints and a
-  singleton index, but holds no row, so something has to stamp it.
-
-Unlike the CRM resources these are not plain CRUD: `audit_log` and
-`login_session` are append-mostly and should probably not accept arbitrary
-updates or deletes, and `instance_metadata` is a singleton.
-
-## 2. Nothing writes `audit_log` or `login_session`
-
-Separate from having endpoints: the API itself should record sign-ins and
-mutations, rather than relying on the front end to report its own activity.
-
-## 3. `created_by_id` / `updated_by_id` are never set
+## 2. `created_by_id` / `updated_by_id` are never set
 
 Every table carries them and every row has them NULL.
 Now unblocked - the bearer dependency yields the acting user, so the CRUD
 layer could stamp them.
 
-## 4. Migrations have no tests
+## 3. Migrations have no tests
 
 Nothing exercises a migration against data.
 Every test runs against a database already at head, so a migration that
