@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.13.0] - 2026-09-18
+
+**Breaking: `audit_log` is reshaped, and `POST /api/v1/audit-log` is removed.**
+There is no migration - the create SQL is edited in place and the database is
+rebuilt.
+
+### Added
+
+- The API writes `audit_log` itself, in `crud.commit()` - the only point every
+  mutation passes through, so a route cannot be silently unaudited.
+  `action` is `create` / `update` / `delete`, read from the session rather
+  than the HTTP method, so a `PUT` that alters nothing produces no entry.
+- An update's `description` lists the columns that changed.
+- Three indexes: `(reference_type, reference_id)`, `user_id`, and
+  `created_at DESC`.
+
+### Changed
+
+- `reference_type` holds the table name instead of an integer, taken from
+  `__tablename__` so there is nothing to map or maintain.
+- `event` is renamed `action`, and left free text so `login` or `export` can
+  be added later without a migration.
+- `description` is `text` rather than `varchar(256)`.
+- `reference_id` is nullable - a create has no id until the flush.
+
+### Removed
+
+- `audit_log.reference`.
+  A human-readable label duplicates data one join away and goes stale.
+- `POST /api/v1/audit-log` and the `AuditLogCreate` schema.
+  The API is the only writer: an entry a client can compose is one it can
+  fabricate or omit.
+
 ## [0.12.1] - 2026-09-17
 
 ### Fixed
