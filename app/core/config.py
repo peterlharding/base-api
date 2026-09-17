@@ -56,6 +56,18 @@ class Settings(BaseSettings):
     # production.
     release: str = "dev"
 
+    # Retention, in days.  Applied by scripts/prune.py; nothing prunes on a
+    # schedule by itself.
+    #
+    # login_session is operational history and loses value quickly.
+    # audit_log defaults to 0, meaning keep indefinitely: an audit trail that
+    # deletes itself on a timer is a weaker guarantee than one that does not,
+    # and at one row per mutation it grows slowly enough that deciding later
+    # is a real option.  The mechanism is here so tightening it is a settings
+    # change rather than new code.
+    login_session_retention_days: int = 90
+    audit_log_retention_days: int = 0
+
     # Token signing.  The default is a placeholder, not a usable secret -
     # app/auth/handler.py rejects it by name, because a default that merely
     # looks wrong would still sign perfectly valid tokens on any deployment

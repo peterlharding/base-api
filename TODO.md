@@ -2,17 +2,7 @@
 
 Outstanding work on base-api, roughly in the order it is worth doing.
 
-## 1. Retention
-
-Three tables grow without bound and nothing prunes them:
-
-- `audit_log` - one row per mutation, by design.  How long is a
-  retention decision, not a cleanup one.
-- `login_session` - one row per sign-in, never deleted.
-- `token_blacklist` - pruned on logout and by `make prune-blacklist`,
-  but nothing runs the latter on a schedule.
-
-## 2. No revoke-all
+## 1. No revoke-all
 
 Signing out one device leaves the others signed in, so there is no way
 to respond to a compromised account in one action.
@@ -40,10 +30,12 @@ Recorded so they are not mistaken for oversights.
 - **Logout revokes one token, not every token a user holds.**
   Signing out on one device leaves other devices signed in.
   A revoke-all would be a separate endpoint.
-- **`token_blacklist` is pruned on logout, not on a schedule.**
-  The table only grows on logout, so that is where it is kept in check.
-  `make prune-blacklist` covers a deployment where nobody signs out for a
-  long stretch; nothing runs it automatically.
+- **Nothing runs `make prune` on a schedule.**
+  The retention policy exists and is applied on demand; a deployment wants a
+  cron entry.  `scripts/prune.py` carries the line.
+- **`audit_log` is kept indefinitely by default.**
+  Deliberate: an audit trail that deletes itself on a timer is a weaker
+  guarantee.  `AUDIT_LOG_RETENTION_DAYS` bounds it where that is needed.
 - **Migration tests use their own database.**
   `tests/test_migrations.py` creates and drops a scratch database per
   session, because it moves the schema version around.

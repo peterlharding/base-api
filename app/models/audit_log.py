@@ -47,3 +47,33 @@ class AuditLog(Base):
 
 
 # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def prune_older_than(cls, session, days: int, *, now=None) -> int:
+        """Delete audit entries older than ``days``.  Returns the count.
+
+        ``days`` of 0 means keep indefinitely and deletes nothing, which is
+        the default: an audit trail that deletes itself on a timer is a weaker
+        guarantee than one that does not.  The method exists so that a
+        deployment which must bound this table can, by setting
+        AUDIT_LOG_RETENTION_DAYS rather than by writing code.
+
+        Deleting from here is deliberately not itself audited.  An entry
+        recording the removal of entries is of no use to anyone reading the
+        table, and the pruning run reports what it did.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import delete
+
+        if days <= 0:
+            return 0
+
+        cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+
+        return session.execute(delete(cls).where(cls.created_at < cutoff)).rowcount
+
+
+# -----------------------------------------------------------------------------

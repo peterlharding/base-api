@@ -6,6 +6,43 @@ database.  SQLite is deliberately out: the app relies on Postgres behaviour
 (server-side defaults, sequences, `TRUNCATE`, transactional DDL) that a file
 database would not exercise.
 
+## Prerequisites
+
+Docker, and a **Compose v2 plugin new enough to talk to your daemon**.
+The CLI and the plugin are separate packages on Debian and Ubuntu, so the
+plugin can lag years behind while `docker --version` looks current.
+
+Docker Engine 29 refuses clients below API 1.44, and Compose v2.18 asks for
+1.42, which fails as:
+
+```
+Error response from daemon: client version 1.42 is too old.
+Minimum supported API version is 1.44
+```
+
+Check with:
+
+```sh
+docker version --format 'client API {{.Client.APIVersion}} | daemon min {{.Server.MinAPIVersion}}'
+docker compose version
+env | grep -i DOCKER_          # a pinned DOCKER_API_VERSION does the same thing
+```
+
+Nothing in this repository causes or can work around that - `make test-db-up`
+is a plain `docker compose up -d`.  To test while sorting it out, start the
+container with the CLI instead, which does not go through Compose:
+
+```sh
+docker run -d --name base-db-test \
+  -e POSTGRES_USER=api -e POSTGRES_PASSWORD=test -e POSTGRES_DB=base_api_test \
+  -p 127.0.0.1:$TEST_DB_PORT:5432 --shm-size=128m postgres
+
+.venv/bin/pytest
+```
+
+`make test` only runs `test-db-up` before `pytest`, so `pytest` alone works
+once the container exists.
+
 ## The test database
 
 `docker/test/docker-compose.yml` runs a throwaway Postgres:

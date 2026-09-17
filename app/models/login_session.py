@@ -80,3 +80,41 @@ class LoginSession(Base):
 
 
 # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def prune_older_than(cls, session, days: int, *, now=None) -> int:
+        """Delete sign-in records older than ``days``.  Returns the count.
+
+        Pruned by age rather than by expiry: a session row is a record that
+        somebody signed in, and that stays true after the session ends.  How
+        long it is worth keeping is a retention decision, which is why the
+        period is a setting rather than a constant.
+
+        A session that has not ended is never deleted, however old it is.
+        Tokens live an hour so this should not arise, but removing the record
+        of a session that still works would leave the API unable to say who
+        is connected.
+
+        ``days`` of 0 means keep indefinitely and deletes nothing.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import delete, or_
+
+        if days <= 0:
+            return 0
+
+        moment = now or datetime.now(timezone.utc)
+        cutoff = moment - timedelta(days=days)
+
+        return session.execute(
+            delete(cls).where(
+                cls.started < cutoff,
+                or_(cls.expires_at < moment, cls.revoked_at.is_not(None)),
+            )
+        ).rowcount
+
+
+# -----------------------------------------------------------------------------

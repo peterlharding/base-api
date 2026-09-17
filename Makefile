@@ -118,14 +118,16 @@ seed-reset:
 
 
 # ------------------------------------------------------------------------
-# token_blacklist grows by one row per logout.  Logout prunes opportunistically;
-# this is for deployments where nobody signs out for a long stretch.
+# Retention.  See scripts/prune.py; nothing runs this on a schedule.
+
+prune:
+	.venv/bin/python scripts/prune.py
+
+prune-dry-run:
+	.venv/bin/python scripts/prune.py --dry-run
 
 prune-blacklist:
-	.venv/bin/python scripts/prune_blacklist.py
-
-prune-blacklist-dry-run:
-	.venv/bin/python scripts/prune_blacklist.py --dry-run
+	.venv/bin/python scripts/prune.py --only token_blacklist
 
 # ------------------------------------------------------------------------
 

@@ -18,8 +18,8 @@ make test-db-reset  # down + up: clean database, migrations re-run
 make migrate        # alembic -c db/alembic.ini upgrade head
 make seed           # load db/schema/data sample rows (refuses if tables are non-empty)
 make seed-reset     # truncate the seeded tables first, then load
-make prune-blacklist          # delete expired token_blacklist rows
-make prune-blacklist-dry-run  # report what would be deleted
+make prune          # apply the retention policy
+make prune-dry-run  # report what would be deleted
 make autogenerate msg="..."   # alembic revision --autogenerate
 make git-chk        # status + last 8 commits + stat of HEAD
 ```
@@ -59,7 +59,8 @@ This is why `tests/conftest.py` defines its own settings class rather than calli
 ## Architecture
 
 FastAPI + SQLAlchemy 2.0 (sync, `Mapped[...]` / `mapped_column`) + psycopg 3 against Postgres.
-Python >= 3.14.
+Python >= 3.12.
+The local `.venv` is built on the newest available; deployment targets 3.12, so the suite is worth running on both before a release - there is no CI doing it.
 
 ```
 app/main.py            create_app(): mounts api_router, defines /health
@@ -183,8 +184,23 @@ Only that token - signing out on one device does not sign the user out everywher
 The blacklist is consulted in **two** places, and both are load-bearing: `bearer.resolve()` for ordinary requests, and `refresh` separately, because refresh reads the Authorization header itself rather than going through the dependency.
 Without the second check a revoked token could be exchanged for a fresh one and logout would achieve nothing.
 
-`token_blacklist` only grows on logout, so logout is also where it is pruned: a row only has to outlive the token it revokes, and once the expiry passes the token fails validation on its own.
-`make prune-blacklist` (and `--dry-run`) does the same for a deployment where nobody signs out for a long stretch.
+### Retention
+
+Three tables grow without bound, and they do not age alike.
+`scripts/prune.py` (`make prune`) applies the policy; nothing runs it on a schedule.
+
+| table | pruned by | default |
+|---|---|---|
+| `token_blacklist` | expiry - the row only has to outlive the token it revokes | always |
+| `login_session` | age, and only once the session has ended | 90 days |
+| `audit_log` | age | **kept indefinitely** |
+
+`audit_log` defaults to keeping everything: an audit trail that deletes itself on a timer is a weaker guarantee than one that does not, and at one row per mutation it grows slowly enough that deciding later is a real option.
+The mechanism is present, so tightening it is `AUDIT_LOG_RETENTION_DAYS` rather than new code.
+A retention of `0` means keep indefinitely.
+
+A `login_session` that has **not** ended is never deleted however old it is - removing the record of a session that still works would leave the API unable to say who is connected.
+Logout also prunes `token_blacklist` opportunistically, which covers the common case.
 
 * **`login-sessions`** is read-only.
   The API writes a row itself when it issues a token (`record_login_session`
