@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.8.1] - 2026-09-17
+
+### Added
+
+- Endpoints for `user_role`, served at `/api/v1/user-roles` - the route is
+  kebab-cased because it is the first resource whose name is two words.
+  That completes CRUD coverage of the CRM tables: 13 resources, 26 routes.
+
+### Fixed
+
+- **Migration `0004` silently destroyed valid self-referencing data.**
+  Its reconciliation step used an unaliased subquery, so for the four
+  self-references (`account.parent_id`, `contact.reports_to_id`,
+  `user_role.parent_role_id`, `application_user.delegated_approver_id`) the
+  inner `FROM` shadowed the outer table.
+  The correlation was lost, every row looked dangling, and the column was
+  NULLed.
+  Both tables are now aliased.
+
+  This shipped in v0.7.0.
+  A database upgraded through `0004` before this fix has lost the affected
+  values and cannot recover them from the database - restore them from
+  wherever the data came from.
+  Sample data comes back with `make seed-reset`.
+  A fresh build was never affected, because `0004` runs on empty tables.
+
 ## [0.8.0] - 2026-09-17
 
 ### Changed
