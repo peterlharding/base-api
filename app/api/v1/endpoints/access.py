@@ -25,6 +25,8 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Access
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
+
 
 
 # -----------------------------------------------------------------------------
@@ -36,7 +38,11 @@ _LABEL = "access"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Access])
+@router.get(
+    "",
+    response_model=list[schemas.Access],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_access_rows(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -49,7 +55,12 @@ def list_access_rows(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Access, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Access,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED,
+)
 def create_access(payload: schemas.AccessCreate, db: Session = Depends(get_db)) -> Access:
     row = Access(**payload.model_dump(exclude_unset=True))
     db.add(row)
@@ -60,7 +71,11 @@ def create_access(payload: schemas.AccessCreate, db: Session = Depends(get_db)) 
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{access_pk}", response_model=schemas.Access)
+@router.get(
+    "/{access_pk}",
+    response_model=schemas.Access,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_access(access_pk: int, db: Session = Depends(get_db)) -> Access:
     """Fetch a single access by surrogate key."""
     return get_or_404(db, Access, access_pk, _LABEL)
@@ -68,7 +83,11 @@ def get_access(access_pk: int, db: Session = Depends(get_db)) -> Access:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{access_pk}", response_model=schemas.Access)
+@router.put(
+    "/{access_pk}",
+    response_model=schemas.Access,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_access(
     access_pk: int,
     payload: schemas.AccessUpdate,
@@ -84,7 +103,11 @@ def update_access(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{access_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{access_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_access(access_pk: int, db: Session = Depends(get_db)) -> None:
     row = get_or_404(db, Access, access_pk, _LABEL)
     db.delete(row)

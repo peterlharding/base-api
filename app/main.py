@@ -15,17 +15,20 @@ from sqlalchemy import text
 
 # -----------------------------------------------------------------------------
 
-from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.db.session import SessionLocal
+
+from app.api.v1.router import api_v1_router
 
 
 # -----------------------------------------------------------------------------
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    
     app = FastAPI(title=settings.app_title)
-    app.include_router(api_router)
+
+    app.include_router(api_v1_router)
 
     @app.get("/health")
     def health() -> dict:

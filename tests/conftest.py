@@ -75,6 +75,7 @@ from sqlalchemy import text
 from app.models.base import Base
 from app.models import ApplicationUser  # noqa: F401  (register models on Base.metadata)
 from app.db.session import SessionLocal
+from app.auth.bearer import jwt_bearer
 from app.main import app
 
 
@@ -119,9 +120,43 @@ def clean_tables() -> None:
 
 # -----------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def _bypass_auth():
+    """Satisfy the bearer dependency for every test by default.
+
+    Most tests exercise business logic, not authentication, and making each
+    one mint a token would put an extra application_user row in the database
+    that list and pagination assertions would then have to account for.
+
+    This overrides the shared jwt_bearer instance, which is why routes depend
+    on it rather than on a per-route Depends(JWTBearer()) - a fresh instance
+    per route has no identity that dependency_overrides can target.
+
+    Tests that need the real dependency use the `protected_client` fixture.
+    """
+    app.dependency_overrides[jwt_bearer] = lambda: None
+    yield
+    app.dependency_overrides.pop(jwt_bearer, None)
+
+
+# -----------------------------------------------------------------------------
+
 @pytest.fixture()
 def client() -> TestClient:
     """A TestClient on the real app — and therefore the test database."""
+    return TestClient(app)
+
+
+# -----------------------------------------------------------------------------
+
+@pytest.fixture()
+def protected_client() -> TestClient:
+    """A TestClient with the bearer dependency left in force.
+
+    For asserting that a route really is protected, which the default client
+    cannot show because the dependency is overridden for it.
+    """
+    app.dependency_overrides.pop(jwt_bearer, None)
     return TestClient(app)
 
 

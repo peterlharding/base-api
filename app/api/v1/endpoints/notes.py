@@ -23,6 +23,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Note
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -34,7 +35,11 @@ _LABEL = "note"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Note])
+@router.get(
+    "",
+    response_model=list[schemas.Note],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_notes(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -47,7 +52,12 @@ def list_notes(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Note, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Note,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_note(payload: schemas.NoteCreate, db: Session = Depends(get_db)) -> Note:
     note = Note(**payload.model_dump(exclude_unset=True))
     db.add(note)
@@ -58,7 +68,11 @@ def create_note(payload: schemas.NoteCreate, db: Session = Depends(get_db)) -> N
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{note_pk}", response_model=schemas.Note)
+@router.get(
+    "/{note_pk}",
+    response_model=schemas.Note,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_note(note_pk: int, db: Session = Depends(get_db)) -> Note:
     """Fetch a single note by surrogate key."""
     return get_or_404(db, Note, note_pk, _LABEL)
@@ -66,7 +80,11 @@ def get_note(note_pk: int, db: Session = Depends(get_db)) -> Note:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{note_pk}", response_model=schemas.Note)
+@router.put(
+    "/{note_pk}",
+    response_model=schemas.Note,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_note(
     note_pk: int,
     payload: schemas.NoteUpdate,
@@ -82,7 +100,11 @@ def update_note(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{note_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{note_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_note(note_pk: int, db: Session = Depends(get_db)) -> None:
     note = get_or_404(db, Note, note_pk, _LABEL)
     db.delete(note)

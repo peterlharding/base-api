@@ -23,6 +23,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Contact
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -34,7 +35,11 @@ _LABEL = "contact"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Contact])
+@router.get(
+    "",
+    response_model=list[schemas.Contact],
+    dependencies=[Depends(jwt_bearer)],
+)
 def list_contacts(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -47,7 +52,12 @@ def list_contacts(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Contact, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Contact,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_contact(payload: schemas.ContactCreate, db: Session = Depends(get_db)) -> Contact:
     contact = Contact(**payload.model_dump(exclude_unset=True))
     db.add(contact)
@@ -58,7 +68,11 @@ def create_contact(payload: schemas.ContactCreate, db: Session = Depends(get_db)
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{contact_pk}", response_model=schemas.Contact)
+@router.get(
+    "/{contact_pk}",
+    response_model=schemas.Contact,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_contact(contact_pk: int, db: Session = Depends(get_db)) -> Contact:
     """Fetch a single contact by surrogate key."""
     return get_or_404(db, Contact, contact_pk, _LABEL)
@@ -66,7 +80,11 @@ def get_contact(contact_pk: int, db: Session = Depends(get_db)) -> Contact:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{contact_pk}", response_model=schemas.Contact)
+@router.put(
+    "/{contact_pk}",
+    response_model=schemas.Contact,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_contact(
     contact_pk: int,
     payload: schemas.ContactUpdate,
@@ -82,7 +100,11 @@ def update_contact(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{contact_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{contact_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_contact(contact_pk: int, db: Session = Depends(get_db)) -> None:
     contact = get_or_404(db, Contact, contact_pk, _LABEL)
     db.delete(contact)

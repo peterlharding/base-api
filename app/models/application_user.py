@@ -134,6 +134,14 @@ class ApplicationUser(Base):
 
     hash                                = '0052'
 
+    # -------------------------------------------------------------------------
+
+    def is_correct_password(self, password: str) -> bool:
+        """Check a plaintext password against the stored bcrypt digest."""
+        from app.auth.password import verify_password
+
+        return verify_password(password, self.hashed_password)
+
 
     # -------------------------------------------------------------------------
     # Computed display names. NULL-safe Python implementations; no
@@ -169,6 +177,39 @@ class ApplicationUser(Base):
     last_name: {self.last_name}
  company_name: {self.company_name}
 """
+
+    # -------------------------------------------------------------------------
+
+    def jsonify(self):
+
+         if self.last_login:
+              last_login = self.last_login_date.strftime('%Y-%m-%d %H:%M:%S')
+         else:
+              last_login = "Never"
+
+         if self.when_modified:
+              updated_at = self.update_at.strftime('%Y-%m-%d %H:%M:%S')
+         else:
+              updated_at = "Never"
+
+         return {
+                    'id'             : self.id,
+                    'guid'           : self.guid,
+                    'username'       : self.username,
+                    'hashedPassword' : self.hashed_password,
+                    'email'          : self.email,
+                    'firstName'      : self.first_name,
+                    'lastName'       : self.last_name,
+                    'companyName'    : self.company_name,
+                    'isAdmin'        : self.is_admin,
+                    'isActive'       : self.is_active,
+                    'role'           : self.role,
+                    'notes'          : self.notes,
+                    'lastLogin'      : last_login,
+                    'createdAt'      : self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updatedAt'      : updated_at,
+                }
+
 
     # -------------------------------------------------------------------------
 

@@ -24,6 +24,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Task
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -35,7 +36,11 @@ _LABEL = "task"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Task])
+@router.get(
+    "",
+    response_model=list[schemas.Task],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_tasks(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -48,7 +53,12 @@ def list_tasks(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Task, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Task,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db)) -> Task:
     task = Task(**payload.model_dump(exclude_unset=True))
     db.add(task)
@@ -59,7 +69,11 @@ def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db)) -> T
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{task_pk}", response_model=schemas.Task)
+@router.get(
+    "/{task_pk}",
+    response_model=schemas.Task,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_task(task_pk: int, db: Session = Depends(get_db)) -> Task:
     """Fetch a single task by surrogate key."""
     return get_or_404(db, Task, task_pk, _LABEL)
@@ -67,7 +81,11 @@ def get_task(task_pk: int, db: Session = Depends(get_db)) -> Task:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{task_pk}", response_model=schemas.Task)
+@router.put(
+    "/{task_pk}",
+    response_model=schemas.Task,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_task(
     task_pk: int,
     payload: schemas.TaskUpdate,
@@ -83,7 +101,11 @@ def update_task(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{task_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{task_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_task(task_pk: int, db: Session = Depends(get_db)) -> None:
     task = get_or_404(db, Task, task_pk, _LABEL)
     db.delete(task)

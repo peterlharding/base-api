@@ -23,6 +23,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Lead
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -34,7 +35,11 @@ _LABEL = "lead"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Lead])
+@router.get(
+    "",
+    response_model=list[schemas.Lead],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_leads(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -47,7 +52,12 @@ def list_leads(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Lead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Lead,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_lead(payload: schemas.LeadCreate, db: Session = Depends(get_db)) -> Lead:
     row = Lead(**payload.model_dump(exclude_unset=True))
     db.add(row)
@@ -58,7 +68,11 @@ def create_lead(payload: schemas.LeadCreate, db: Session = Depends(get_db)) -> L
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{lead_pk}", response_model=schemas.Lead)
+@router.get(
+    "/{lead_pk}",
+    response_model=schemas.Lead,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_lead(lead_pk: int, db: Session = Depends(get_db)) -> Lead:
     """Fetch a single lead by surrogate key."""
     return get_or_404(db, Lead, lead_pk, _LABEL)
@@ -66,7 +80,11 @@ def get_lead(lead_pk: int, db: Session = Depends(get_db)) -> Lead:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{lead_pk}", response_model=schemas.Lead)
+@router.put(
+    "/{lead_pk}",
+    response_model=schemas.Lead,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_lead(
     lead_pk: int,
     payload: schemas.LeadUpdate,
@@ -82,7 +100,11 @@ def update_lead(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{lead_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{lead_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_lead(lead_pk: int, db: Session = Depends(get_db)) -> None:
     row = get_or_404(db, Lead, lead_pk, _LABEL)
     db.delete(row)

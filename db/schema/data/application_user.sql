@@ -1,4 +1,17 @@
 
+-- application_user sample data
+--
+-- Loaded into an empty table, so the rows get ids 1 and 2.  Other sample
+-- files reference application_user 1 (admin) and 2 (plh) by those ids.
+--
+-- Passwords are bcrypt-hashed (app/auth/password.py).  The plaintext for
+-- both users is 'sample-password'.  Regenerate a hash with:
+--
+--     python -m app.auth.password '<password>'
+--
+-- Sample data only.  make seed-reset rewrites these rows, so a hash changed
+-- directly in the database does not survive a re-seed - change it here.
+
 INSERT INTO public.application_user (
     guid,
     username,
@@ -42,7 +55,7 @@ INSERT INTO public.application_user (
 (
     '0000ebd2-dfef-11e8-815a-0001c01c22f7',
     'admin',
-    'c2030e133a44709fbd527524a80bd5e9774fed58690c6fe19f4abdea50b0cc98',
+    '$2b$12$3pjpWeknaDxsH8kTxgAFD.uFsYjrJ/9.QuvREDM25L2CvhILlkIXe',
     'admin',
     'Peter',
     'Harding',
@@ -81,7 +94,7 @@ INSERT INTO public.application_user (
 (
     '0009ebd2-dfef-11e8-815a-0001c01c22f7',
     'plh',
-    'c2030e133a44709fbd527524a80bd5e9774fed58690c6fe19f4abdea50b0cc98',
+    '$2b$12$oJv1vBhD2Hqqm0vbMrxGJOPyJZuyjoF9Kmwt71MHY5oPG5v68lbmm',
     'plh',
     'Peter',
     'Harding',

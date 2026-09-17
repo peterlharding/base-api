@@ -24,6 +24,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Event
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -35,7 +36,11 @@ _LABEL = "event"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Event])
+@router.get(
+    "",
+    response_model=list[schemas.Event],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_events(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -48,7 +53,12 @@ def list_events(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Event, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Event,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db)) -> Event:
     event = Event(**payload.model_dump(exclude_unset=True))
     db.add(event)
@@ -59,7 +69,11 @@ def create_event(payload: schemas.EventCreate, db: Session = Depends(get_db)) ->
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{event_pk}", response_model=schemas.Event)
+@router.get(
+    "/{event_pk}",
+    response_model=schemas.Event,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_event(event_pk: int, db: Session = Depends(get_db)) -> Event:
     """Fetch a single event by surrogate key."""
     return get_or_404(db, Event, event_pk, _LABEL)
@@ -67,7 +81,11 @@ def get_event(event_pk: int, db: Session = Depends(get_db)) -> Event:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{event_pk}", response_model=schemas.Event)
+@router.put(
+    "/{event_pk}",
+    response_model=schemas.Event,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_event(
     event_pk: int,
     payload: schemas.EventUpdate,
@@ -83,7 +101,11 @@ def update_event(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{event_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_event(event_pk: int, db: Session = Depends(get_db)) -> None:
     event = get_or_404(db, Event, event_pk, _LABEL)
     db.delete(event)

@@ -23,6 +23,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Quote
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -34,7 +35,11 @@ _LABEL = "quote"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Quote])
+@router.get(
+    "",
+    response_model=list[schemas.Quote],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_quotes(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -47,7 +52,12 @@ def list_quotes(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Quote, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Quote,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_quote(payload: schemas.QuoteCreate, db: Session = Depends(get_db)) -> Quote:
     row = Quote(**payload.model_dump(exclude_unset=True))
     db.add(row)
@@ -58,7 +68,11 @@ def create_quote(payload: schemas.QuoteCreate, db: Session = Depends(get_db)) ->
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{quote_pk}", response_model=schemas.Quote)
+@router.get(
+    "/{quote_pk}",
+    response_model=schemas.Quote,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_quote(quote_pk: int, db: Session = Depends(get_db)) -> Quote:
     """Fetch a single quote by surrogate key."""
     return get_or_404(db, Quote, quote_pk, _LABEL)
@@ -66,7 +80,11 @@ def get_quote(quote_pk: int, db: Session = Depends(get_db)) -> Quote:
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{quote_pk}", response_model=schemas.Quote)
+@router.put(
+    "/{quote_pk}",
+    response_model=schemas.Quote,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_quote(
     quote_pk: int,
     payload: schemas.QuoteUpdate,
@@ -82,7 +100,11 @@ def update_quote(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{quote_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{quote_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_quote(quote_pk: int, db: Session = Depends(get_db)) -> None:
     row = get_or_404(db, Quote, quote_pk, _LABEL)
     db.delete(row)

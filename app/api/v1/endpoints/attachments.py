@@ -22,6 +22,7 @@ from app.api.v1      import schemas
 from app.api.v1.crud import apply_update, commit, get_or_404
 from app.models      import Attachment
 from app.db.session  import get_db
+from app.auth.bearer import jwt_bearer
 
 
 # -----------------------------------------------------------------------------
@@ -33,7 +34,11 @@ _LABEL = "attachment"
 
 # -----------------------------------------------------------------------------
 
-@router.get("", response_model=list[schemas.Attachment])
+@router.get(
+    "",
+    response_model=list[schemas.Attachment],
+    dependencies=[Depends(jwt_bearer)]
+)
 def list_attachments(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=200),
@@ -46,7 +51,12 @@ def list_attachments(
 
 # -----------------------------------------------------------------------------
 
-@router.post("", response_model=schemas.Attachment, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=schemas.Attachment,
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_201_CREATED
+)
 def create_attachment(payload: schemas.AttachmentCreate, db: Session = Depends(get_db)) -> Attachment:
     row = Attachment(**payload.model_dump(exclude_unset=True))
     db.add(row)
@@ -57,7 +67,11 @@ def create_attachment(payload: schemas.AttachmentCreate, db: Session = Depends(g
 
 # -----------------------------------------------------------------------------
 
-@router.get("/{attachment_pk}", response_model=schemas.Attachment)
+@router.get(
+    "/{attachment_pk}",
+    response_model=schemas.Attachment,
+    dependencies=[Depends(jwt_bearer)]
+)
 def get_attachment(attachment_pk: int, db: Session = Depends(get_db)) -> Attachment:
     """Fetch a single attachment by surrogate key."""
     return get_or_404(db, Attachment, attachment_pk, _LABEL)
@@ -65,7 +79,11 @@ def get_attachment(attachment_pk: int, db: Session = Depends(get_db)) -> Attachm
 
 # -----------------------------------------------------------------------------
 
-@router.put("/{attachment_pk}", response_model=schemas.Attachment)
+@router.put(
+    "/{attachment_pk}",
+    response_model=schemas.Attachment,
+    dependencies=[Depends(jwt_bearer)]
+)
 def update_attachment(
     attachment_pk: int,
     payload: schemas.AttachmentUpdate,
@@ -81,7 +99,11 @@ def update_attachment(
 
 # -----------------------------------------------------------------------------
 
-@router.delete("/{attachment_pk}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{attachment_pk}",
+    dependencies=[Depends(jwt_bearer)],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_attachment(attachment_pk: int, db: Session = Depends(get_db)) -> None:
     row = get_or_404(db, Attachment, attachment_pk, _LABEL)
     db.delete(row)

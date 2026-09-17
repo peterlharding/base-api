@@ -44,6 +44,7 @@ from app.core.config import get_settings         # noqa: E402
 # enforces this but the data is wrong without it.
 
 ORDER = [
+    "api_credentials",
     "application_user",
     "user_role",
     "account",

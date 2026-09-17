@@ -48,3 +48,19 @@ class TokenBlacklist(Base):
 
 
 # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def check_blacklist(cls, session, jti: str) -> bool:
+        """True if this token id has been revoked.
+
+        Takes the caller's session rather than opening its own, so the check
+        joins the surrounding request transaction.
+        """
+        from sqlalchemy import select
+
+        return session.scalar(select(cls.jti).where(cls.jti == jti)) is not None
+
+
+# -----------------------------------------------------------------------------

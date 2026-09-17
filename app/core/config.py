@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     db_port: int = 5432
     db_name: str = "base_api"
 
+    jwt_algorithm: str = "HS256"
+    jwt_secret: str = "<This is replaced bythe value in .env at runtime>"
+
     @property
     def database_url(self) -> str:
         """SQLAlchemy URL for the base_api database, connecting as `api`."""

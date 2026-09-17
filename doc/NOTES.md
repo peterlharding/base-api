@@ -141,5 +141,62 @@ approval.
 
 ---
 
+# Misc
 
+## DB Authentication
+
+"Where in the python code is the DB_PASSWORD from the .env file sourced?"
+
+Two places, and one of them is deliberately not reading it.
+
+### Where it's read: app/core/config.py
+
+```text
+41:    db_password: str = ""
+```
+
+That field declaration is the whole mechanism. Settings extends pydantic-settings' BaseSettings with env_file=_PROJECT_ROOT / ".env", so the field name db_password maps case-insensitively to DB_PASSWORD in the environment or .env. There's no explicit read anywhere - no os.getenv, no parsing.
+
+It's consumed once, in the database_url property:
+
+```text
+51:  f"{quote_plus(self.db_password)}@{self.db_host}:{self.db_port}/{self.db_name}"
+```
+
+quote_plus matters - your password is Very-secreT, but one containing @, / or : would corrupt the URL without it.
+
+### Where it's used
+
+  Ran 1 shell command
+
+The full chain, and it's short:
+
+```text
+.env  DB_PASSWORD=Very-secreT
+  -> app/core/config.py:41    db_password: str = ""        (pydantic-settings binds it)
+  -> app/core/config.py:51    database_url property        (quote_plus encoded)
+     -> app/db/session.py:21  create_engine(...)           <- the app
+     -> db/alembic/env.py:23  sqlalchemy.url               <- migrations
+```
+
+Those two are the only consumers. Both call get_settings(), which is @lru_cached, so the password is read from .env exactly once per process.
+
+### The one that deliberately doesn't read it
+
+tests/conftest.py is the interesting case - it has db_password but never reads DB_PASSWORD:
+
+```text
+53:    db_password: str = "test"          # on _TestDb, env_prefix="TEST_"
+61:  os.environ["DB_PASSWORD"] = _test_db.db_password
+```
+
+_TestDb sets env_prefix="TEST_", so that field binds to TEST_DB_PASSWORD, not DB_PASSWORD. Line 61 then writes DB_PASSWORD into the environment before the app is imported, so Settings picks up the test value.
+
+That asymmetry is the safety property: the suite reads only TEST_* keys, so pointing DB_PASSWORD or DB_PORT at your dev database can never redirect the tests at it.
+
+### Worth knowing
+
+The .env value never reaches Python as a literal anywhere else. The DB_PASSWORD you'll see in docker/db/Makefile and db/schema/sql/01-create-users.sql is a separate path entirely - make greps .env textually and passes it to psql as the db_password variable, with no Python involved.
+
+Also: db_password defaults to "", so a missing DB_PASSWORD produces a URL with an empty password rather than an error. You'd see it as an authentication failure at connect time, not a config error at startup. The SQL side is stricter - 01-create-users.sql refuses to run with an empty password. Worth aligning if you want the app to fail fast too.
 

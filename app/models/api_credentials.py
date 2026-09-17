@@ -32,3 +32,14 @@ class ApiCredential(Base):
 
 
 # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+
+    def is_correct_password(self, password: str) -> bool:
+        """Check a plaintext password against the stored bcrypt digest."""
+        from app.auth.password import verify_password
+
+        return verify_password(password, self.hashed_password)
+
+
+# -----------------------------------------------------------------------------
