@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     opportunities,
     quotes,
     tasks,
+    user_roles,
     users,
 )
 
@@ -38,6 +39,7 @@ api_router.include_router(leads.router)
 api_router.include_router(quotes.router)
 api_router.include_router(access.router)
 api_router.include_router(attachments.router)
+api_router.include_router(user_roles.router)
 
 
 # -----------------------------------------------------------------------------

@@ -42,12 +42,28 @@ INDEX CONCURRENTLY can't run in a transaction and can leave an invalid inde righ
 Naming follows <table>_<column>_idx, matching login_session_user_id_idx and token_blacklist_user_id_idx rather than SQLAlchemy's ix_ default.                                
 CLAUDE.md/AGENTS.md had this listed as an open gap; that's now replaced with the measurement and a note that any new foreign key should get its index in the same migration. Changelog has a fresh [Unreleased] section.
 
+---
+
+No measurable difference at 50k rows - the times are equivalent. Let me find where it actually matters rather than assert a benefit I haven't measured:
+
+Clear at scale:
+
+┌───────────────┬──────────┬──────────┐
+│               │ 50k rows │ 1M rows  │
+├───────────────┼──────────┼──────────┤
+│ with index    │ ~5 ms    │ ~11.7 ms │
+├───────────────┼──────────┼──────────┤
+│ without index │ ~5 ms    │ ~47.5 ms │
+└───────────────┴──────────┴──────────┘
+
+Roughly 4x at a million rows, and widening - the seq scan is O(n) while the index lookup isn't. Clearing the synthetic data and running the full verification:
+
 
 # v0.2.0
 
 Routes — new layer, verified live against Postgres:
 
-```
+```bash
 app/api/v1/
 ├── router.py           api_router (prefix /api/v1)
 ├── schemas.py          UserCreate / UserUpdate / User
@@ -70,25 +86,17 @@ All done — and yes on the version call. Summary:
 
 v0.2.0 release, pushed to origin:
 
-```
-┌───────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│   Step    │                                                       Result                                                        │
-├───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Changelog │ CHANGELOG.md created (none existed) — 0.2.0 covers the route layer + alembic move with the endpoint table and       │
-│           │ design notes; 0.1.0 documents the scaffold                                                                          │
-├───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Version   │ pyproject.toml bumped 0.1.0 → 0.2.0                                                                                 │
-├───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Commit 1  │ eb4dfdd — the route code                                                                                            │
-├───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Commit 2  │ be14e20 — changelog + version bump (the tag anchor)                                                                 │
-├───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Tags      │ v0.2.0 → be14e20, and v0.1.0 back-tagged onto 3af39b4 — there were no tags at all before, so the scaffold release   │
-│           │ got its marker too                                                                                                  │
-├───────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ Push      │ main (3af39b4..be14e20) + both tags, verified on the remote                                                         │
-└───────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
+|   Step    |                                                       Result                                                        |
+| --------- | ------------------------------------------------------------------------------------------------------------------- |
+| Changelog | CHANGELOG.md created (none existed) — 0.2.0 covers the route layer + alembic move with the endpoint table and       |
+|           | design notes; 0.1.0 documents the scaffold                                                                          |
+| Version   | pyproject.toml bumped 0.1.0 → 0.2.0                                                                                 |
+| Commit 1  | eb4dfdd — the route code                                                                                            |
+| Commit 2  | be14e20 — changelog + version bump (the tag anchor)                                                                 |
+| Tags      | v0.2.0 → be14e20, and v0.1.0 back-tagged onto 3af39b4 — there were no tags at all before, so the scaffold release   |
+|           | got its marker too                                                                                                  |
+| Push      | main (3af39b4..be14e20) + both tags, verified on the remote                                                         |
+
 
 Why 0.2.0 fits: 0.1.0 was the scaffold — it booted and probed the DB but had no API surface. This release adds the first versioned endpoints, which is a feature, hence a minor bump under 0.x.
 

@@ -245,3 +245,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Editor swap and backup files
+*.swp
+*.swo
+*~
+.*.sw?

@@ -68,9 +68,9 @@ app/models/            one module per table; __init__ imports all 18 of them
 app/api/v1/router.py   api_router, prefix /api/v1
 app/api/v1/schemas.py  pydantic request/response models
 app/api/v1/crud.py     shared commit/get_or_404/apply_update helpers
-app/api/v1/endpoints/  one module per resource (12: users, accounts, contacts,
+app/api/v1/endpoints/  one module per resource (13: users, accounts, contacts,
                        tasks, events, documents, notes, opportunities, leads,
-                       quotes, access, attachments)
+                       quotes, access, attachments, user_roles)
 db/alembic/            migrations (env.py reuses get_settings())
 db/schema/create/      table DDL - executed by the migrations, not standalone
 db/schema/ddl/         the set_updated_at trigger function
@@ -175,6 +175,7 @@ Every resource follows the same shape, and `users.py` is the reference: page wit
 Adding one means a model, a `Base`/`Create`/`Update`/response quartet in `schemas.py`, an endpoint module, and a line in `router.py`.
 
 The path parameter is always the surrogate integer `id`, never the client-side `guid`.
+Routes are the pluralised table name, kebab-cased when it is more than one word: `user_role` is served at `/api/v1/user-roles`.
 `PUT` is patch-style: `model_dump(exclude_unset=True)`, and an empty body is a 400.
 Server-managed columns are deliberately absent from the write schemas - `hashed_password`, and the `created_by_id` / `updated_by_id` stamps - while `created_at` / `updated_at` are read back but never written.
 

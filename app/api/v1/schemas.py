@@ -812,3 +812,57 @@ class Attachment(AttachmentBase):
 
 
 # -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# UserRole
+#
+# Mirrors user_role minus the server-managed parts: created_at / updated_at
+# are read back but never written, and the *_by_id audit stamps are neither.
+
+
+class UserRoleBase(BaseModel):
+    """Every writable business field of user_role."""
+
+    guid: UUID | None = None
+    name: str | None = None
+    parent_role_id: int | None = None
+    rollup_description: str | None = None
+    opportunity_access_for_account_owner: str | None = None
+    case_access_for_account_owner: str | None = None
+    contact_access_for_account_owner: str | None = None
+    forecast_user_id: int | None = None
+    portal_account_ref: str | None = None
+    portal_type: str | None = None
+
+
+# -----------------------------------------------------------------------------
+
+class UserRoleCreate(UserRoleBase):
+    """Payload for POST /user-roles; only name is mandatory
+    (api-level: the column is nullable in the database).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+
+
+# -----------------------------------------------------------------------------
+
+class UserRoleUpdate(UserRoleBase):
+    """Payload for PUT /user-roles/{id}; all fields optional (patch-style)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+# -----------------------------------------------------------------------------
+
+class UserRole(UserRoleBase):
+    """A user role as returned by the API, including id and audit timestamps."""
+
+    id: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+# -----------------------------------------------------------------------------

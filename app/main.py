@@ -12,6 +12,9 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+
+# -----------------------------------------------------------------------------
+
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.db.session import SessionLocal

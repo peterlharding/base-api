@@ -20,6 +20,12 @@
   a bulk load that cannot honour the ordering issues SET CONSTRAINTS ALL
   DEFERRED inside its transaction, which is what scripts/seed.py does.
 
+  Both tables in each reconciliation subquery are aliased.  Four of these
+  constraints are self-references - account.parent_id, contact.reports_to_id,
+  user_role.parent_role_id and application_user.delegated_approver_id - and
+  without aliases the inner FROM shadows the outer table, so the correlation
+  is lost and every row looks dangling.  That silently NULLs valid data.
+
   Values that do not resolve are set to NULL before each constraint is
   created, so an existing database can be upgraded in place.  That discards
   data, but only data that was already meaningless - a reference to a row
@@ -67,129 +73,129 @@ depends_on:    Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Reconcile before constraining; see the note in the module docstring.
     op.execute(
-        "UPDATE access SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = access.owner_id)"
+        "UPDATE access AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE access SET user_id = NULL"
-        " WHERE user_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = access.user_id)"
+        "UPDATE access AS c SET user_id = NULL"
+        " WHERE c.user_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.user_id)"
     )
     op.execute(
-        "UPDATE account SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = account.owner_id)"
+        "UPDATE account AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE attachment SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = attachment.owner_id)"
+        "UPDATE attachment AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE contact SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = contact.owner_id)"
+        "UPDATE contact AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE document SET author_id = NULL"
-        " WHERE author_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = document.author_id)"
+        "UPDATE document AS c SET author_id = NULL"
+        " WHERE c.author_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.author_id)"
     )
     op.execute(
-        "UPDATE lead SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = lead.owner_id)"
+        "UPDATE lead AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE note SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = note.owner_id)"
+        "UPDATE note AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE opportunity SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = opportunity.owner_id)"
+        "UPDATE opportunity AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE task SET owner_id = NULL"
-        " WHERE owner_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = task.owner_id)"
+        "UPDATE task AS c SET owner_id = NULL"
+        " WHERE c.owner_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.owner_id)"
     )
     op.execute(
-        "UPDATE quote SET quoter_id = NULL"
-        " WHERE quoter_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = quote.quoter_id)"
+        "UPDATE quote AS c SET quoter_id = NULL"
+        " WHERE c.quoter_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.quoter_id)"
     )
     op.execute(
-        "UPDATE user_role SET forecast_user_id = NULL"
-        " WHERE forecast_user_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = user_role.forecast_user_id)"
+        "UPDATE user_role AS c SET forecast_user_id = NULL"
+        " WHERE c.forecast_user_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.forecast_user_id)"
     )
     op.execute(
-        "UPDATE application_user SET delegated_approver_id = NULL"
-        " WHERE delegated_approver_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM application_user WHERE application_user.id = application_user.delegated_approver_id)"
+        "UPDATE application_user AS c SET delegated_approver_id = NULL"
+        " WHERE c.delegated_approver_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM application_user AS p WHERE p.id = c.delegated_approver_id)"
     )
     op.execute(
-        "UPDATE account SET parent_id = NULL"
-        " WHERE parent_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM account WHERE account.id = account.parent_id)"
+        "UPDATE account AS c SET parent_id = NULL"
+        " WHERE c.parent_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM account AS p WHERE p.id = c.parent_id)"
     )
     op.execute(
-        "UPDATE contact SET account_id = NULL"
-        " WHERE account_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM account WHERE account.id = contact.account_id)"
+        "UPDATE contact AS c SET account_id = NULL"
+        " WHERE c.account_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM account AS p WHERE p.id = c.account_id)"
     )
     op.execute(
-        "UPDATE opportunity SET account_id = NULL"
-        " WHERE account_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM account WHERE account.id = opportunity.account_id)"
+        "UPDATE opportunity AS c SET account_id = NULL"
+        " WHERE c.account_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM account AS p WHERE p.id = c.account_id)"
     )
     op.execute(
-        "UPDATE quote SET account_id = NULL"
-        " WHERE account_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM account WHERE account.id = quote.account_id)"
+        "UPDATE quote AS c SET account_id = NULL"
+        " WHERE c.account_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM account AS p WHERE p.id = c.account_id)"
     )
     op.execute(
-        "UPDATE task SET account_id = NULL"
-        " WHERE account_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM account WHERE account.id = task.account_id)"
+        "UPDATE task AS c SET account_id = NULL"
+        " WHERE c.account_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM account AS p WHERE p.id = c.account_id)"
     )
     op.execute(
-        "UPDATE lead SET converted_account_id = NULL"
-        " WHERE converted_account_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM account WHERE account.id = lead.converted_account_id)"
+        "UPDATE lead AS c SET converted_account_id = NULL"
+        " WHERE c.converted_account_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM account AS p WHERE p.id = c.converted_account_id)"
     )
     op.execute(
-        "UPDATE contact SET reports_to_id = NULL"
-        " WHERE reports_to_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM contact WHERE contact.id = contact.reports_to_id)"
+        "UPDATE contact AS c SET reports_to_id = NULL"
+        " WHERE c.reports_to_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM contact AS p WHERE p.id = c.reports_to_id)"
     )
     op.execute(
-        "UPDATE quote SET contact_id = NULL"
-        " WHERE contact_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM contact WHERE contact.id = quote.contact_id)"
+        "UPDATE quote AS c SET contact_id = NULL"
+        " WHERE c.contact_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM contact AS p WHERE p.id = c.contact_id)"
     )
     op.execute(
-        "UPDATE lead SET converted_contact_id = NULL"
-        " WHERE converted_contact_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM contact WHERE contact.id = lead.converted_contact_id)"
+        "UPDATE lead AS c SET converted_contact_id = NULL"
+        " WHERE c.converted_contact_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM contact AS p WHERE p.id = c.converted_contact_id)"
     )
     op.execute(
-        "UPDATE lead SET converted_opportunity_id = NULL"
-        " WHERE converted_opportunity_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM opportunity WHERE opportunity.id = lead.converted_opportunity_id)"
+        "UPDATE lead AS c SET converted_opportunity_id = NULL"
+        " WHERE c.converted_opportunity_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM opportunity AS p WHERE p.id = c.converted_opportunity_id)"
     )
     op.execute(
-        "UPDATE user_role SET parent_role_id = NULL"
-        " WHERE parent_role_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM user_role WHERE user_role.id = user_role.parent_role_id)"
+        "UPDATE user_role AS c SET parent_role_id = NULL"
+        " WHERE c.parent_role_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM user_role AS p WHERE p.id = c.parent_role_id)"
     )
     op.execute(
-        "UPDATE application_user SET user_role_id = NULL"
-        " WHERE user_role_id IS NOT NULL"
-        " AND NOT EXISTS (SELECT 1 FROM user_role WHERE user_role.id = application_user.user_role_id)"
+        "UPDATE application_user AS c SET user_role_id = NULL"
+        " WHERE c.user_role_id IS NOT NULL"
+        " AND NOT EXISTS (SELECT 1 FROM user_role AS p WHERE p.id = c.user_role_id)"
     )
 
     op.create_foreign_key(

@@ -26,6 +26,7 @@ RESOURCES = [
     ("quotes",        {"quoter": "PLH"}),
     ("access",        {"reference_type": "account"}),
     ("attachments",   {"name": "scan.pdf"}),
+    ("user-roles",    {"name": "Sales Manager"}),
 ]
 
 
