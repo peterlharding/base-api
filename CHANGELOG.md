@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.10.0] - 2026-09-17
+
+### Added
+
+- `GET /api/v1/login-sessions` and `/{id}` - **read-only**.
+  The API records a sign-in itself in `authenticate`, and `refresh` advances
+  `last_seen`.
+  Only a SHA-256 of the token is stored, and the endpoint never returns even
+  that.
+- `GET` and `POST /api/v1/audit-log`, plus `/{id}` - **append-only**, no
+  `PUT` or `DELETE`.
+  `user_id` comes from the bearer token, never the payload.
+- `GET /api/v1/instance-metadata` - a **singleton**, so one object rather
+  than a list.
+  `release`, `db_version` and `notes` come from the row; `app_version` and
+  `alembic_revision` are read per request, because a version stamped into a
+  row goes stale as soon as the application is upgraded without a migration.
+- Migration `0006` stamps the `instance_metadata` row, taking `release` from
+  a new `RELEASE` setting - a migration cannot know which environment it is
+  running against.
+  Skipped if a row already exists.
+- `app/core/version.py`, reading the version from `pyproject.toml` so a
+  release bump stays in one place.
+- `tests/test_no_secret_logging.py`, asserting that no secret reaches stdout,
+  stderr or the logger during a sign-in.
+
+### Fixed
+
+- Sign-ins were silently not being recorded.
+  `ip_address` is `INET` and `request.client.host` is not always an address -
+  a proxy may report a hostname - so the insert failed and the recorder
+  swallowed it.
+  Non-addresses now go to `workstation`.
+- `GET /login-sessions` returned 500 against a real client: `INET`
+  deserialises as an address object, not a `str`.
+- `app/utils.py`'s `log_session` referenced `session.username` and
+  `LoginSession.NextId`, neither of which exist, and never set the NOT NULL
+  `session_token_hash`.
+  Replaced by `record_login_session`.
+- The `jwt_secret` placeholder default is rejected by name.
+  It is long enough to pass the length check, so a deployment missing a
+  `.env` would otherwise sign valid tokens with a string from the repository.
+- Three debug `print()` calls emitting the plaintext password were removed
+  from `authenticate`.
+
 ## [0.9.0] - 2026-09-17
 
 **Breaking: every /api/v1 CRUD route now requires a bearer token.**
