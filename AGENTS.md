@@ -24,6 +24,11 @@ make autogenerate msg="..."   # alembic revision --autogenerate
 make git-chk        # status + last 8 commits + stat of HEAD
 ```
 
+The `seed` and `prune` targets pass `ARGS` through to the script, so
+`make prune ARGS=--only audit_log` reaches argparse and an unrecognised flag
+fails the target rather than being accepted and dropped.
+`tests/test_makefile.py` holds every script-driven recipe to that.
+
 Single test, once the container is up (plain `pytest` works too):
 
 ```sh

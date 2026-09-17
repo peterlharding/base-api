@@ -106,28 +106,37 @@ autogenerate:
 
 
 # ------------------------------------------------------------------------
+# The script-driven targets below pass $(ARGS) through, so a flag reaches
+# the script rather than being accepted and dropped.  Without it
+# `make prune ARGS=--dry-run` runs the real prune: make takes the variable
+# happily and the recipe never mentions it, so the run looks requested and
+# is not.  Passed through, a flag either works or argparse rejects it and
+# the target fails.
+
+
+# ------------------------------------------------------------------------
 # Sample data (db/schema/data), deliberately outside the migration chain -
 # see the docstring in scripts/seed.py.  `seed-reset` truncates first, which
 # the data files need in order to land on the ids they cross-reference.
 
 seed:
-	.venv/bin/python scripts/seed.py
+	.venv/bin/python scripts/seed.py $(ARGS)
 
 seed-reset:
-	.venv/bin/python scripts/seed.py --reset
+	.venv/bin/python scripts/seed.py --reset $(ARGS)
 
 
 # ------------------------------------------------------------------------
 # Retention.  See scripts/prune.py; nothing runs this on a schedule.
 
 prune:
-	.venv/bin/python scripts/prune.py
+	.venv/bin/python scripts/prune.py $(ARGS)
 
 prune-dry-run:
-	.venv/bin/python scripts/prune.py --dry-run
+	.venv/bin/python scripts/prune.py --dry-run $(ARGS)
 
 prune-blacklist:
-	.venv/bin/python scripts/prune.py --only token_blacklist
+	.venv/bin/python scripts/prune.py --only token_blacklist $(ARGS)
 
 # ------------------------------------------------------------------------
 
