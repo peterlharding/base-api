@@ -253,6 +253,15 @@ SQLite is deliberately not used: the tests depend on Postgres behaviour (server-
   Before rather than after, so a stray row left in the container by a manual session cannot fail the first test of a run.
   Rollback-based isolation is not usable because the endpoints call `db.commit()`.
 * The `client` fixture is available to every test; just drop a `test_*.py` in `tests/`.
+
+**Migrations are tested against data**, in `tests/test_migrations.py`.
+Every other test runs against a database already at head, so a migration that corrupts existing rows passes all of them - which is exactly what `0004` did, clearing valid self-referencing values while 222 tests stayed green.
+
+Those tests use a scratch database created and dropped per session (`tests/migration_fixtures.py`), so moving its revision around cannot disturb the one the rest of the suite shares.
+`migrate.to(revision)` moves in either direction; `migrate.session()` gives a session on it.
+`db/alembic/env.py` honours a URL the caller has already pinned, which is what points alembic at the scratch database.
+
+A migration that changes data wants a test that plants rows at the previous revision, upgrades, and asserts what survived.
 * `_TestDb` in `conftest.py` resolves the connection from the `TEST_*` keys of the root `.env`, then writes them into `os.environ` as `DB_*` above its own imports.
   Bare `pytest` and `make test` therefore always agree on the port.
 

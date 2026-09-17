@@ -65,6 +65,28 @@ the same `.env`, so it cannot disagree with `make test`.
 
 `make chk-env` prints the `TEST_DB_PORT` actually in effect.
 
+## Migration tests
+
+`tests/test_migrations.py` runs against a **separate scratch database**,
+created and dropped per session, because it moves the schema version around
+and that would wreck the database the rest of the suite shares.
+
+The rest of the suite runs against a database already at head, so a migration
+that corrupts existing rows passes every one of those tests.  Migration
+`0004` did exactly that.
+
+The fixtures are in `tests/migration_fixtures.py`:
+
+```python
+def test_something(migrate):
+    migrate.to("0003")              # build to a revision
+    with migrate.session() as s:    # plant data
+        ...
+    migrate.to("0004")              # upgrade
+    with migrate.session() as s:    # assert what survived
+        ...
+```
+
 ## Adding tests
 
 Drop a `test_*.py` in `tests/`; the `client` fixture (a `TestClient` on the

@@ -10,15 +10,6 @@ front end can `POST` its own activity to `/api/v1/audit-log`.
 What is missing is the API recording its own mutations - a create, update or
 delete through any CRUD route leaves no trace.
 
-## 2. Migrations have no tests
-
-Nothing exercises a migration against data.
-Every test runs against a database already at head, so a migration that
-corrupts existing rows passes the suite - which is exactly what happened with
-the self-reference bug in `0004`, caught by eye rather than by CI.
-A fixture that builds to revision N, plants data, upgrades and asserts would
-have caught it.
-
 ---
 
 ## Deliberate non-goals
@@ -37,6 +28,10 @@ Recorded so they are not mistaken for oversights.
 - **Constraints live only in the migration that introduces them**, never in
   `db/schema/create/*.sql`, because Postgres has no
   `ADD CONSTRAINT IF NOT EXISTS`.
+- **Migration tests use their own database.**
+  `tests/test_migrations.py` creates and drops a scratch database per
+  session, because it moves the schema version around.
+  The rest of the suite shares one database already at head.
 - **`/health` is unauthenticated.**
   It is a liveness probe; requiring a token would defeat it.
 - **`/api/v1/auth/authenticate` is unauthenticated by design.**

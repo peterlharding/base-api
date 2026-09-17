@@ -33,7 +33,13 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# A caller that has already pinned the URL wins - tests/migration_fixtures.py
+# points alembic at a scratch database so it can move revisions around without
+# disturbing the one the rest of the suite shares.  Otherwise take it from the
+# application settings, so migrations and the app cannot address different
+# databases.
+if not config.get_main_option("sqlalchemy.url", None):
+    config.set_main_option("sqlalchemy.url", get_settings().database_url)
 
 target_metadata = Base.metadata
 
