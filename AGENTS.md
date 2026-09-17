@@ -176,6 +176,11 @@ Audit columns are named `updated_at` / `updated_by_id` throughout, matching the 
 Most endpoints are the same five operations over a table.  These are not, and
 the asymmetry is deliberate:
 
+`POST /api/v1/auth/logout` revokes the token the request was made with: its `jti` goes into `token_blacklist`, and the matching `login_session` is stamped `revoked_at`.
+Only that token - signing out on one device does not sign the user out everywhere.
+The blacklist is consulted in **two** places, and both are load-bearing: `bearer.resolve()` for ordinary requests, and `refresh` separately, because refresh reads the Authorization header itself rather than going through the dependency.
+Without the second check a revoked token could be exchanged for a fresh one and logout would achieve nothing.
+
 * **`login-sessions`** is read-only.
   The API writes a row itself when it issues a token (`record_login_session`
   in `app/utils.py`), because a front end that reports its own sessions can

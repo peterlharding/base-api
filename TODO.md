@@ -28,6 +28,12 @@ Recorded so they are not mistaken for oversights.
 - **Constraints live only in the migration that introduces them**, never in
   `db/schema/create/*.sql`, because Postgres has no
   `ADD CONSTRAINT IF NOT EXISTS`.
+- **Logout revokes one token, not every token a user holds.**
+  Signing out on one device leaves other devices signed in.
+  A revoke-all would be a separate endpoint.
+- **Nothing prunes `token_blacklist`.**
+  Rows carry an `expiry` so they can be deleted once the token would have
+  expired anyway, but no job does it.
 - **Migration tests use their own database.**
   `tests/test_migrations.py` creates and drops a scratch database per
   session, because it moves the schema version around.

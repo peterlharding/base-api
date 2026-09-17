@@ -30,7 +30,12 @@ from sqlalchemy.orm import Session
 
 from app.logger        import logger
 from app.utils         import record_login_session
-from app.models        import ApiCredential, ApplicationUser
+from app.models        import (
+    ApiCredential,
+    ApplicationUser,
+    LoginSession,
+    TokenBlacklist,
+)
 from app.db.session    import get_db
 from app.auth.handler  import TOKEN_TTL, decode_token, sign_token
 from app.auth.bearer   import jwt_bearer
@@ -104,6 +109,27 @@ def _issue(user: ApplicationUser) -> dict:
         "refresh_interval": int(TOKEN_TTL.total_seconds()),
         "user": user,
     }
+
+
+# -----------------------------------------------------------------------------
+
+def _bearer_token(request: Request) -> str:
+    """The raw token from the Authorization header.
+
+    The dependency has already verified it by the time a route body runs, but
+    it hands back the user rather than the credential, and revoking a token
+    needs the token.
+    """
+    header = request.headers.get("Authorization", "")
+
+    if not header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return header.removeprefix("Bearer ").strip()
 
 
 # -----------------------------------------------------------------------------
@@ -208,6 +234,17 @@ def refresh(request: Request, db: Session = Depends(get_db)) -> dict:
     except jwt.PyJWTError:
         raise _unauthorised("Bearer") from None
 
+    # A revoked token must not be exchangeable for a fresh one, or logging
+    # out would achieve nothing: refresh does not go through jwt_bearer, so
+    # the blacklist has to be consulted here too.
+    jti = payload.get("jti")
+    if jti and TokenBlacklist.check_blacklist(db, jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     expiry = payload.get("exp")
     if expiry is None:
         raise _unauthorised("Bearer")
@@ -234,6 +271,65 @@ def refresh(request: Request, db: Session = Depends(get_db)) -> dict:
     logger.info("refresh: reissued a token for user id %s", user.id)
 
     return issued
+
+
+# -----------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    request: Request,
+    actor: ApplicationUser = Depends(jwt_bearer),
+    db: Session = Depends(get_db),
+) -> None:
+    """Revoke the token this request was made with.
+
+    The token's jti goes into token_blacklist, which the bearer dependency
+    checks on every request, so the token stops working immediately rather
+    than merely being forgotten by the client.  Only this token is revoked -
+    signing out on one device does not sign the user out everywhere.
+
+    The matching login_session is stamped revoked_at, so the session list
+    shows what happened rather than a row that simply stops being refreshed.
+
+    Idempotent from the caller's point of view: a second attempt with the
+    same token is rejected by the dependency with 401, because by then the
+    token really is revoked.
+    """
+    import hashlib
+
+    token   = _bearer_token(request)
+    payload = decode_token(token)
+    jti     = payload.get("jti")
+
+    if jti is None:
+        # Tokens have carried a jti since they were first issued; one without
+        # is not something to guess about.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token carries no id and cannot be revoked",
+        )
+
+    db.add(TokenBlacklist(
+        jti=jti,
+        user_id=actor.id,
+        reason="logout",
+        expiry=datetime.fromtimestamp(payload["exp"], tz=timezone.utc),
+    ))
+
+    session = db.scalar(
+        select(LoginSession).where(
+            LoginSession.session_token_hash == hashlib.sha256(token.encode()).digest()
+        )
+    )
+    if session is not None and session.revoked_at is None:
+        session.revoked_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+    logger.info("logout: revoked a token for user id %s", actor.id)
 
 
 # -----------------------------------------------------------------------------
