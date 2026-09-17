@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.15.0] - 2026-09-18
+
+### Added
+
+- `POST /api/v1/auth/revoke-all` - revoke every token the caller holds, on
+  every device, including the one the request was made with.
+  Where logout revokes one token, this is the answer to a lost laptop or a
+  password someone else has seen.
+  Returns the cutoff and how many sessions it ended.
+- `application_user.tokens_revoked_before` (migration `0007`).
+  Every token issued to the user before this instant is refused; NULL, which
+  is every row until the endpoint is used, means none have been.
+  A cutoff rather than a `token_blacklist` row per token: the blacklist is
+  keyed on `jti` and nothing holds a list of a user's outstanding ones, so
+  the tokens most worth revoking are exactly the ones it would miss.
+- `ApplicationUser.revoke_tokens()` and `.rejects_token_issued_at()`.
+- `tokens_revoked_before` on the user response schema.
+  Server-managed, so it is readable and absent from the write schemas.
+- `tests/test_revoke_all.py` - 15 tests, and three more in
+  `tests/test_migrations.py` covering both paths through `0007`.
+
+### Changed
+
+- `iat` is now signed as a float rather than truncated to whole seconds.
+  RFC 7519 permits a non-integer NumericDate, and the precision is what the
+  revocation cutoff is compared against: at one-second resolution a token
+  minted in the same second as a revoke-all survives or dies depending on
+  where the truncation falls.
+  Existing integer-`iat` tokens still compare correctly - truncation rounds
+  towards the past, which errs towards revoking.
+- `refresh` now honours the revocation cutoff as well as the blacklist.
+  It does not go through the bearer dependency, so a check only there would
+  let a revoked token be exchanged for a working one.
+
 ## [0.14.1] - 2026-09-18
 
 ### Fixed
