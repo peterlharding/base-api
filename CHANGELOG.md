@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.12.0] - 2026-09-17
+
+### Added
+
+- `POST /api/v1/auth/logout` - revokes the token the request was made with.
+  Its `jti` goes into `token_blacklist`, which the bearer dependency checks
+  on every request, so the token stops working server-side rather than merely
+  being dropped by the client.
+  The matching `login_session` is stamped `revoked_at`.
+  Only that token is revoked: signing out on one device does not sign the
+  user out everywhere.
+- `tests/test_logout.py` - 10 tests.
+
+### Fixed
+
+- **A revoked token could still be exchanged for a fresh one.**
+  `refresh` reads the `Authorization` header itself rather than going through
+  the bearer dependency, so it never consulted the blacklist - which would
+  have made logout decorative.
+  The blacklist is now checked in both places.
+
 ## [0.11.1] - 2026-09-17
 
 ### Added
