@@ -58,6 +58,20 @@ Both compose files carry `${...:-5432}` / `${...:-5433}` fallbacks, so a checkou
 
 `.env` is gitignored; `setup/env.template` is the committed template and the only record of the required keys.
 
+### CORS
+
+Off unless `CORS_ORIGINS` names at least one origin, which is the right default for the server-to-server caller the API was built for.
+`app/core/cors.py` parses it and installs the middleware; `create_app()` does so **before** including the router, because `CORSMiddleware` answers the preflight `OPTIONS` itself and a preflight that reached a protected route could never succeed - a browser sends it without credentials.
+
+The setting is a comma-separated `str`, not a `list[str]`, because pydantic-settings feeds a complex annotation through `json.loads` first and `CORS_ORIGINS=http://localhost:5173` is not JSON.
+Typed as a list, that value fails at startup with a parse error rather than a useful one.
+
+Credentials are deliberately not allowed: authentication is a bearer token in a header, which a browser sends without them, so enabling cookies would buy nothing this API uses.
+Methods and headers are listed rather than `*`, and `tests/test_cors.py` checks the method list against the live OpenAPI schema - a router that gains `PATCH` fails a test instead of failing a preflight in somebody's network tab.
+
+`*` is accepted on dev, test and staging, and raises on a `prod` release.
+Every other origin check is a list someone maintains; `*` is the one value that silently stops being one.
+
 `get_settings()` is `@lru_cache`d, so environment changes after first call have no effect within a process.
 This is why `tests/conftest.py` defines its own settings class rather than calling `get_settings()`: doing so would cache the dev settings before `app/db/session.py` builds its engine.
 

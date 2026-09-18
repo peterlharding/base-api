@@ -16,6 +16,7 @@ from sqlalchemy import text
 # -----------------------------------------------------------------------------
 
 from app.core.config import get_settings
+from app.core.cors import configure_cors
 from app.db.session import SessionLocal
 
 from app.api.v1.router import api_v1_router
@@ -27,6 +28,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
     
     app = FastAPI(title=settings.app_title)
+
+    # Before the routes: CORSMiddleware answers the preflight OPTIONS itself,
+    # so a protected route never sees it.  A preflight that had to carry a
+    # token would be unanswerable - the browser sends it without one.
+    configure_cors(app, settings)
 
     app.include_router(api_v1_router)
 

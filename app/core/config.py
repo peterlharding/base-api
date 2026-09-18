@@ -68,6 +68,16 @@ class Settings(BaseSettings):
     login_session_retention_days: int = 90
     audit_log_retention_days: int = 0
 
+    # Origins allowed to call this API from a browser, comma-separated:
+    #     CORS_ORIGINS=http://localhost:5173,https://app.example.com
+    #
+    # Empty, the default, installs no CORS middleware at all - the API was
+    # built for a server-to-server caller, which needs none.  Typed as a
+    # string rather than list[str] because pydantic-settings feeds a complex
+    # annotation through json.loads first, and a bare comma-separated value
+    # would fail startup with a JSON parse error.  app/core/cors.py splits it.
+    cors_origins: str = ""
+
     # Token signing.  The default is a placeholder, not a usable secret -
     # app/auth/handler.py rejects it by name, because a default that merely
     # looks wrong would still sign perfectly valid tokens on any deployment
