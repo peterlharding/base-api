@@ -1,4 +1,42 @@
 
+# v0.16.0
+
+v0.16.0 is out. 514 tests green, pushed, tag on the release commit.
+
+Add this to .env when the front-end exists:
+
+```text
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+```
+
+Exact origins, no trailing slash. localhost and 127.0.0.1 are different origins to a browser, so list both if you use both. Empty - which is what your server has right now - installs no middleware at all, so the deployment is unchanged until you set it.
+
+Verified end-to-end against a real uvicorn rather than only through TestClient:
+
+```bash
+$ curl -X OPTIONS .../api/v1/users -H "Origin: http://localhost:5173" \
+       -H "Access-Control-Request-Method: POST" ...
+HTTP/1.1 200 OK
+access-control-allow-origin: http://localhost:5173
+access-control-allow-methods: GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-headers: ..., Authorization, ..., Content-Type
+```
+
+That is a protected route and the preflight carries no token. It has to work that way - a browser sends preflights without credentials - which is why configure_cors() runs before the router is included. An unlisted origin still gets a normal 200 with no Access-Control-Allow-Origin; the browser is what refuses to hand the response to the page.
+
+## Three decisions worth knowing:
+
+Credentials are off. Auth is a bearer token in a header, which a browser sends without credentials: 'include'. Enabling cookies would buy nothing this API uses.
+
+Methods and headers are listed, not *. A test derives the served methods from the live OpenAPI schema and checks them against the allowed list, so adding PATCH to a router fails a test rather than a preflight you debug from the network tab.
+
+CORS_ORIGINS=* raises on a prod release, and warns elsewhere. Same reasoning as handler.py refusing the placeholder JWT secret by name.
+
+Two things from this round worth flagging honestly. The commented-out CORS you remembered is not in this repo and never was - git log -S CORS --all is empty - so it came from the other FastAPI project. And my first pass of tests could not distinguish "no middleware installed" from "installed and matching nothing", because both emit no header; I found that by mutation-testing and added a structural assertion on app.user_middleware.
+
+Unchanged and still your call for the front-end: the Basic credential on /auth/authenticate cannot ship in a JS bundle. CORS does not touch that.
+
+
 # v0.7.1
 
 Done. Migration 0005 indexes all 25 foreign key columns.
