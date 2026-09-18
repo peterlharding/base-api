@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (minor bumps for new features while at 0.x).
 
+## [0.16.0] - 2026-09-18
+
+### Added
+
+- CORS, configured by `CORS_ORIGINS` in the repo-root `.env` and applied by
+  `app/core/cors.py`.
+  Comma-separated exact origins; empty, the default, installs no middleware
+  at all, which is right for the server-to-server caller the API was built
+  for.
+  The middleware is installed before the router, because `CORSMiddleware`
+  answers the preflight `OPTIONS` itself and a browser sends that without
+  credentials - a preflight reaching a protected route could never succeed.
+- A `prod` release refuses `CORS_ORIGINS=*` at startup.
+  Accepted on dev, test and staging with a warning.
+  Every other origin check is a list someone maintains; `*` is the one value
+  that silently stops being one.
+- `tests/test_cors.py` - 22 tests, including a drift guard that checks the
+  allowed methods against the live OpenAPI schema, so a router that gains
+  `PATCH` fails a test rather than a preflight.
+
+### Notes
+
+- Credentials are deliberately not allowed.
+  Authentication is a bearer token in a header, which a browser sends
+  without them; enabling cookies would buy nothing this API uses.
+- `cors_origins` is typed `str` rather than `list[str]`: pydantic-settings
+  runs a complex annotation through `json.loads` first, so a bare
+  `CORS_ORIGINS=http://localhost:5173` would fail at startup.
+
 ## [0.15.0] - 2026-09-18
 
 ### Added
